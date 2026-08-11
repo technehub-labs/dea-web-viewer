@@ -6,6 +6,22 @@ clickable, filterable, multi-view canvas.
 
 **Live site:** <https://technehub-labs.github.io/dea-web-viewer/>
 
+## Relationship to the classic metamodel navigator
+
+This is a **separate tool** from the classic class-grid navigator at
+<https://technehub-labs.github.io/metamodel/>. The two UIs share the
+same published artefacts (entity-graph.json + metamodel.svg from
+`technehub-labs/technehub-labs.github.io/metamodel/`) but render them
+independently:
+
+| Tool | URL | Tech | Use case |
+|---|---|---|---|
+| **dea-web-viewer** (this repo) | `/dea-web-viewer/` | React 19 + Vite + TS, 5 view modes | Deep exploration: SVG topology, interactive canvas, matrix, traceability, catalog browser |
+| **Classic navigator** | `/metamodel/` | Vanilla JS class-grid | Quick reference: rendered SVG with click-to-catalog-repo navigation |
+
+The classic navigator remains the visual-refinement work from
+`dea-metamodel` PR #66. It is not a redirect target.
+
 ## What it is
 
 A React 19 + Vite + TypeScript single-page app with five modes:
