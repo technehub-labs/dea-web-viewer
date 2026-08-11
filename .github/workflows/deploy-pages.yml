@@ -1,0 +1,71 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Only one deployment at a time. Queue subsequent runs.
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+# Pages deploy needs write access to the repo for the GH Pages environment
+# and to create the gh-pages environment / upload Pages artefacts.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Don't deploy PR previews — only main.
+if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+
+environment:
+  name: github-pages
+  url: ${{ steps.deployment.outputs.page_url }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        # Pass the canonical repo URL so vite asset URLs resolve correctly
+        # when served from https://<org>.github.io/<repo>/.
+        env:
+          GITHUB_PAGES: '1'
+        run: npm run build
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artefact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

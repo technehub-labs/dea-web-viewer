@@ -1,0 +1,10 @@
+{
+  "name": "DEA Web Viewer",
+  "description": "Interactive viewer for the DEA Metamodel. Reads from /public/data/* which is auto-synced from technehub-labs/dea-metamodel via .github/workflows/sync-from-dea-metamodel.yml.",
+  "dataSources": {
+    "entityGraph": "/data/entity-graph.json",
+    "metamodelSvg": "/data/metamodel.svg",
+    "metamodelPuml": "/data/metamodel.puml"
+  },
+  "syncContract": "public/data/* are CI-managed. Hand-edits will be overwritten on the next sync run."
+}

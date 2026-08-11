@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same branch on new pushes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-build:
+    name: Lint + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      # The viewer reads entity-graph.json / metamodel.svg / metamodel.puml
+      # from public/data/ at runtime. Those files are owned by the
+      # `sync-from-dea-metamodel.yml` workflow — they are .gitignore'd
+      # for hand-edits and only present on the branch after that bot runs.
+      # On PR branches the bot has not committed yet, so we download the
+      # canonical artefacts from technehub-labs/technehub-labs.github.io
+      # (the *public* Pages repo, which is the actual publication point
+      # for the metamodel viewer) via the public raw.githubusercontent.com
+      # endpoint. We use the Pages repo, not dea-metamodel, because:
+      #   1. dea-metamodel is private — the workflow's GITHUB_TOKEN has
+      #      no cross-repo org access, so an API fetch from CI 404s
+      #   2. The Pages repo is public — raw.githubusercontent.com works
+      #      without authentication
+      #   3. The Pages repo is the canonical *published* artefact; using
+      #      it keeps the viewer aligned with what users see at
+      #      https://technehub-labs.github.io/metamodel/
+      # On main the files are already committed by the sync bot and this
+      # step is a no-op.
+      - name: Ensure synced artefacts are present
+        run: |
+          set -euo pipefail
+          mkdir -p public/data
+          missing=0
+          # source_repo, dst, src-path-in-pages-repo
+          declare -a entries=(
+            "technehub-labs.github.io|entity-graph.json|metamodel/entity-graph.json"
+            "technehub-labs.github.io|metamodel.svg|metamodel/metamodel.svg"
+          )
+          # metamodel.puml is optional — the Pages repo does not publish it.
+          # The sync bot fetches it from the private dea-metamodel repo on
+          # main and commits it; on PR branches we skip it (the viewer works
+          # without it — see syncedMetamodel.ts fallback comment).
+          for entry in "${entries[@]}"; do
+            repo="${entry%%|*}"
+            rest="${entry#*|}"
+            f="${rest%%|*}"
+            src="${rest#*|}"
+            dst="public/data/$f"
+            if [ ! -s "$dst" ]; then
+              echo "::warning::$dst missing in working tree — fetching from $repo@main for CI"
+              url="https://raw.githubusercontent.com/technehub-labs/$repo/main/$src"
+              if ! curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$dst"; then
+                echo "::error::Failed to download $url"
+                exit 1
+              fi
+              missing=1
+            fi
+          done
+          if [ "$missing" = "1" ]; then
+            echo "::notice::Synced artefacts fetched from technehub-labs.github.io@main for CI build only. They will be replaced by the sync bot on merge."
+          fi
+          for f in public/data/entity-graph.json public/data/metamodel.svg; do
+            if [ ! -s "$f" ]; then
+              echo "::error::Missing or empty synced artefact: $f"
+              exit 1
+            fi
+          done
+          echo "OK — synced artefacts present"
+          python3 -c "import json; d=json.load(open('public/data/entity-graph.json')); print(f'entity-graph.json: {d[\"metamodel_version\"]} ({len(d[\"entities\"])} entities)')"
+          echo "metamodel.svg: $(wc -c < public/data/metamodel.svg) bytes"
+          if [ -s public/data/metamodel.puml ]; then
+            echo "metamodel.puml: $(wc -c < public/data/metamodel.puml) bytes"
+          fi
+
+      - name: Type check (tsc --noEmit)
+        run: npm run lint
+
+      - name: Build (vite build)
+        run: npm run build
+
+      - name: Upload build artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dea-web-viewer-dist
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error

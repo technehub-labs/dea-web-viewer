@@ -1,0 +1,883 @@
+/* ==================================================================
+ * DEA Web Viewer — Stylesheet
+ *
+ * The visual language is borrowed from the TechNeHub Labs landing page
+ * (see /discord-attachments/styles.css). Components use the same dark
+ * theme, the same teal accent (#2dd4bf), and the same typography
+ * pairing (Space Grotesk headings + Inter body + JetBrains Mono code).
+ *
+ * We deliberately keep the new viewers on the landing-page's CSS
+ * variable system, so any future tweak to the landing page's palette
+ * can be ported here by updating the :root block.
+ * ================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+ * Design tokens — lifted from the landing page CSS so the two repos
+ * stay in lock-step.
+ * ------------------------------------------------------------------ */
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-2: #21262d;
+  --border: rgba(45, 212, 191, 0.12);
+  --border-2: rgba(45, 212, 191, 0.25);
+  --accent: #2dd4bf;
+  --accent-dim: rgba(45, 212, 191, 0.1);
+  --accent-glow: rgba(45, 212, 191, 0.2);
+  --text: #e6edf3;
+  --text-2: #8b949e;
+  --text-3: #484f58;
+  --green: #3fb950;
+  --blue: #58a6ff;
+  --orange: #f0883e;
+  --purple: #a371f7;
+  --red: #f85149;
+  --yellow: #d29922;
+  --pink: #ec4899;
+
+  --font-head: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --transition: 0.25s ease;
+}
+
+/* ------------------------------------------------------------------
+ * Globals
+ * ------------------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+a:hover {
+  color: #5eead4;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-head);
+  color: var(--text);
+  margin: 0;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+code, pre, .mono {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: rgba(45, 212, 191, 0.35);
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------------
+ * Layout
+ * ------------------------------------------------------------------ */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Fixed navbar from the landing page, reused verbatim */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(13, 17, 23, 0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-head);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.nav-brand svg {
+  width: 28px;
+  height: 28px;
+}
+
+.nav-brand .meta-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid var(--border-2);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.nav-tab:hover {
+  background: rgba(45, 212, 191, 0.06);
+  color: var(--text);
+}
+
+.nav-tab.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--border-2);
+}
+
+.nav-tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+.nav-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  width: 240px;
+  flex-shrink: 0;
+}
+
+.nav-search input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 13px;
+  width: 100%;
+  font-family: var(--font-body);
+}
+
+.nav-search input::placeholder {
+  color: var(--text-3);
+}
+
+.nav-search svg {
+  width: 14px;
+  height: 14px;
+  color: var(--text-2);
+}
+
+/* ------------------------------------------------------------------
+ * Filter bar (under the nav)
+ * ------------------------------------------------------------------ */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.filter-bar-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.chip:hover {
+  border-color: var(--border-2);
+  color: var(--text);
+}
+
+.chip.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chip .chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
+.chip.active .chip-dot {
+  background: var(--accent);
+}
+
+.chip .chip-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-3);
+  background: var(--bg);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.chip.active .chip-count {
+  color: var(--accent);
+  background: rgba(45, 212, 191, 0.08);
+}
+
+/* ------------------------------------------------------------------
+ * Cards (used by Catalog view, Traceability, etc.)
+ * ------------------------------------------------------------------ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.card-title svg {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+}
+
+.card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--accent);
+  margin-top: 12px;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------
+ * Drawer (entity details)
+ * ------------------------------------------------------------------ */
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 60;
+  overflow-y: auto;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer-header {
+  position: sticky;
+  top: 0;
+  background: rgba(22, 27, 34, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 1;
+}
+
+.drawer-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-size: 13px;
+}
+
+.drawer-close {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.drawer-close:hover {
+  border-color: var(--border-2);
+  color: var(--text);
+}
+
+.entity-id-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 14px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.layer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid var(--border-2);
+}
+
+/* ------------------------------------------------------------------
+ * Buttons
+ * ------------------------------------------------------------------ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all var(--transition);
+  text-decoration: none;
+}
+
+.btn:hover {
+  border-color: var(--border-2);
+  background: var(--surface-2);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: #5eead4;
+  color: var(--bg);
+  border-color: #5eead4;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-2);
+}
+
+.btn-ghost:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: transparent;
+}
+
+/* ------------------------------------------------------------------
+ * Catalog grid (Catalogs view)
+ * ------------------------------------------------------------------ */
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.catalog-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all var(--transition);
+  text-decoration: none;
+  color: inherit;
+}
+
+.catalog-card:hover {
+  border-color: var(--border-2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(45, 212, 191, 0.1);
+}
+
+.catalog-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.catalog-card-title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.catalog-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.catalog-card-desc {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.catalog-card-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.catalog-card-status.existing {
+  color: var(--green);
+  border-color: var(--green);
+  background: rgba(63, 185, 80, 0.1);
+}
+
+.catalog-card-status.scaffold {
+  color: var(--yellow);
+  border-color: var(--yellow);
+  background: rgba(210, 153, 34, 0.1);
+}
+
+.catalog-card-status.planned {
+  color: var(--blue);
+  border-color: var(--blue);
+  background: rgba(88, 166, 255, 0.1);
+}
+
+.catalog-card-status.existing-extended {
+  color: var(--purple);
+  border-color: var(--purple);
+  background: rgba(163, 113, 247, 0.1);
+}
+
+/* ------------------------------------------------------------------
+ * Footer (mirrors the landing-page footer)
+ * ------------------------------------------------------------------ */
+.app-footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 16px 24px;
+  font-size: 12px;
+  color: var(--text-2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.app-footer code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--accent);
+}
+
+/* ------------------------------------------------------------------
+ * Interactive canvas (kept — relies on the 6-layer layout)
+ * ------------------------------------------------------------------ */
+.canvas-host {
+  position: relative;
+  flex: 1;
+  background: var(--bg);
+  overflow: hidden;
+  min-height: 600px;
+}
+
+.canvas-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  z-index: 10;
+  box-shadow: var(--shadow);
+}
+
+.canvas-info {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--text-2);
+  z-index: 10;
+  max-width: 320px;
+  font-family: var(--font-mono);
+}
+
+/* ------------------------------------------------------------------
+ * SVG viewport (canonical SVG view)
+ * ------------------------------------------------------------------ */
+.svg-view-host {
+  position: relative;
+  flex: 1;
+  background: #ffffff; /* the synced SVG is light-themed; keep canvas white */
+  overflow: hidden;
+}
+
+.svg-view-host > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.svg-view-host g.entity {
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.svg-view-host g.entity:hover {
+  filter: brightness(0.95) drop-shadow(0 0 6px rgba(45, 212, 191, 0.5));
+}
+
+.svg-view-host g.entity.selected {
+  filter: drop-shadow(0 0 8px rgba(45, 212, 191, 0.8));
+}
+
+/* ------------------------------------------------------------------
+ * Banner (1×1 across the top of every view)
+ * ------------------------------------------------------------------ */
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: linear-gradient(90deg, rgba(45, 212, 191, 0.08), transparent);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-2);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.banner-strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.banner code {
+  color: var(--accent);
+}
+
+/* ------------------------------------------------------------------
+ * Matrix (legacy view, restyled)
+ * ------------------------------------------------------------------ */
+.matrix-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 4px;
+  font-size: 12px;
+}
+
+.matrix-table th,
+.matrix-table td {
+  padding: 8px;
+  text-align: center;
+  border-radius: var(--radius-sm);
+}
+
+.matrix-table th {
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.matrix-table td {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.matrix-table td.matrix-cell-empty {
+  color: var(--text-3);
+  cursor: default;
+  background: transparent;
+  border-color: transparent;
+}
+
+.matrix-table td.matrix-cell:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.matrix-table td.matrix-cell-selected {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+/* ------------------------------------------------------------------
+ * Traceability chip groups
+ * ------------------------------------------------------------------ */
+.path-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.path-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.path-node:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.path-arrow {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-2);
+  letter-spacing: 0.02em;
+}
+
+.path-arrow svg {
+  width: 14px;
+  height: 14px;
+  color: var(--text-3);
+}
+
+/* ------------------------------------------------------------------
+ * Empty state / loading
+ * ------------------------------------------------------------------ */
+.loading-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-shell {
+  margin: 24px auto;
+  max-width: 720px;
+  padding: 16px 20px;
+  background: rgba(248, 81, 73, 0.08);
+  border: 1px solid var(--red);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+}
+
+/* ------------------------------------------------------------------
+ * Utility
+ * ------------------------------------------------------------------ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 960px) {
+  .nav-inner {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 12px 16px;
+    gap: 8px;
+  }
+  .nav-search {
+    width: 100%;
+  }
+  .drawer {
+    width: 100%;
+  }
+}
