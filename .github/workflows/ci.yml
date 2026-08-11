@@ -32,21 +32,50 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Type check (tsc --noEmit)
-        run: npm run lint
-
-      - name: Verify synced artefacts are present
+      # The viewer reads entity-graph.json / metamodel.svg / metamodel.puml
+      # from public/data/ at runtime. Those files are owned by the
+      # `sync-from-dea-metamodel.yml` workflow — they are .gitignore'd
+      # for hand-edits and only present on the branch after that bot runs.
+      # On PR branches the bot has not committed yet, so we fetch the
+      # canonical artefacts directly from technehub-labs/dea-metamodel and
+      # stage them into public/data/ just for this CI run. On main, the
+      # files are already committed and this is a no-op.
+      - name: Ensure synced artefacts are present
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          mkdir -p public/data
+          missing=0
+          for f in entity-graph.json metamodel.svg metamodel.puml; do
+            case "$f" in
+              entity-graph.json) src="viewer/entity-graph.json" ;;
+              metamodel.svg)     src="viewer/metamodel.svg" ;;
+              metamodel.puml)    src="metamodel-puml/metamodel-v2.puml" ;;
+            esac
+            dst="public/data/$f"
+            if [ ! -s "$dst" ]; then
+              echo "::warning::$dst missing in working tree — fetching from dea-metamodel@main for CI"
+              gh api -H "Accept: application/vnd.github.raw+json" \
+                "repos/technehub-labs/dea-metamodel/contents/$src" > "$dst"
+              missing=1
+            fi
+          done
+          if [ "$missing" = "1" ]; then
+            echo "::notice::Synced artefacts fetched from dea-metamodel@main for CI build only. They will be replaced by the sync bot on merge."
+          fi
           for f in public/data/entity-graph.json public/data/metamodel.svg public/data/metamodel.puml; do
             if [ ! -s "$f" ]; then
-              echo "::error::Missing or empty synced artefact: $f"
-              echo "Run the sync workflow first:"
-              echo "  gh workflow run sync-from-dea-metamodel.yml"
+              echo "::error::Missing or empty synced artefact: $f (fetch from dea-metamodel also failed)"
               exit 1
             fi
           done
           echo "OK — synced artefacts present"
+          python3 -c "import json; d=json.load(open('public/data/entity-graph.json')); print(f'entity-graph.json: {d[\"metamodel_version\"]} ({len(d[\"entities\"])} entities)')"
+          echo "metamodel.svg: $(wc -c < public/data/metamodel.svg) bytes"
+
+      - name: Type check (tsc --noEmit)
+        run: npm run lint
 
       - name: Build (vite build)
         run: npm run build
