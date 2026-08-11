@@ -22,20 +22,28 @@ A React 19 + Vite + TypeScript single-page app with five modes:
 
 This viewer **does not** hand-author metamodel data. All entities, relationships,
 layer assignments, and the rendered SVG are pulled from
-[`technehub-labs/dea-metamodel`](https://github.com/technehub-labs/dea-metamodel)
-by a CI workflow and committed under `public/data/`:
+[`technehub-labs/technehub-labs.github.io`](https://github.com/technehub-labs/technehub-labs.github.io)
+(the **publication point** of the metamodel viewer) by a CI workflow and
+committed under `public/data/`:
 
 ```
 public/data/entity-graph.json   # entities, classes, catalog linkage
-public/data/metamodel.puml       # PlantUML source (relationships, attributes)
-public/data/metamodel.svg        # canonical PlantUML render
+public/data/metamodel.svg       # canonical PlantUML render
+public/data/metamodel.puml      # optional — only if upstream publishes it
 ```
+
+The sync source is the Pages repo (not `dea-metamodel`, which is private)
+because the Pages repo is what users actually see at
+`https://technehub-labs.github.io/metamodel/` and is publicly fetchable
+from CI without any PAT secret.
 
 These files are **owned by the bot** — see [`.github/workflows/sync-from-dea-metamodel.yml`](.github/workflows/sync-from-dea-metamodel.yml).
 Hand-edits will be overwritten on the next sync (the workflow detects the drift
 and emits a `::warning::` annotation).
 
-To change the metamodel, edit it in `dea-metamodel` and trigger the sync:
+To change the metamodel, edit it in `dea-metamodel`, run its regeneration bot
+to publish the new artefacts to `technehub-labs.github.io@main`, then trigger the
+sync:
 
 ```bash
 gh workflow run sync-from-dea-metamodel.yml --repo technehub-labs/dea-web-viewer

@@ -1,34 +1,43 @@
-name: Sync from dea-metamodel
+name: Sync from technehub-labs.github.io
 
 # This workflow is the contract that makes the viewer impossible to
-# drift from the canonical metamodel. It pulls the artefacts that
-# dea-metamodel publishes for downstream consumers:
+# drift from the published metamodel. It pulls the artefacts that the
+# technehub-labs/technehub-labs.github.io Pages repo publishes for the
+# /metamodel/ route:
 #
-#   - viewer/entity-graph.json  -> public/data/entity-graph.json
-#   - viewer/metamodel.svg      -> public/data/metamodel.svg
+#   - metamodel/entity-graph.json  -> public/data/entity-graph.json
+#   - metamodel/metamodel.svg      -> public/data/metamodel.svg
 #
 # and commits them to the viewer's main branch when they change.
 #
 # Hand-edits to public/data/* will be overwritten on the next sync.
+#
+# Why this repo (and not dea-metamodel):
+#   - technehub-labs.github.io is the *publication point* — what users
+#     actually see at https://technehub-labs.github.io/metamodel/
+#   - It's public, so no PAT secret is needed to fetch from CI
+#   - dea-metamodel is private; cross-repo access from CI requires a
+#     PAT and adds complexity that buys us nothing because the Pages
+#     repo is the canonical published artefact
 
 on:
-  # Run on a schedule so the viewer follows dea-metamodel if the metamodel
-  # bot pushes an update without us triggering a downstream run.
+  # Run on a schedule so the viewer follows the Pages repo if it
+  # changes upstream without us triggering a downstream run.
   schedule:
     - cron: '0 */6 * * *'  # every 6 hours
 
-  # Manual trigger from the Actions tab. Use this when you want to force
-  # a sync outside the schedule.
+  # Manual trigger from the Actions tab. Use this when you want to
+  # force a sync outside the schedule.
   workflow_dispatch:
     inputs:
       ref:
-        description: 'dea-metamodel ref to sync from (branch or tag)'
+        description: 'technehub-labs.github.io ref to sync from (branch or tag)'
         required: false
         default: 'main'
         type: string
 
   # If someone pushes a PR to dea-web-viewer that touches public/data/*
-  # the workflow runs in dry-run mode and fails the build (so reviewers
+  # the workflow runs in dry-run mode and warns reviewers (so they
   # notice the drift and convert the PR to a no-op).
   push:
     branches: [main]
@@ -55,7 +64,7 @@ jobs:
           # synced files. If so, we treat this as a drift event and
           # the sync will overwrite the hand-edits.
           if git log -1 --name-only --pretty=format: | \
-                grep -E '^public/data/(entity-graph\.json|metamodel\.svg)$' \
+                grep -E '^public/data/(entity-graph\.json|metamodel\.svg|metamodel\.puml)$' \
                 > /dev/null; then
             echo "drift=true" >> "$GITHUB_OUTPUT"
             echo "::warning::Hand-edits to public/data/ detected. The sync step will overwrite them."
@@ -63,7 +72,7 @@ jobs:
             echo "drift=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Determine dea-metamodel ref
+      - name: Determine source ref
         id: ref
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
@@ -73,67 +82,55 @@ jobs:
             REF="main"
           fi
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
-          echo "Syncing from technehub-labs/dea-metamodel@$REF"
+          echo "Syncing from technehub-labs/technehub-labs.github.io@$REF"
 
-      - name: Fetch canonical artefacts from dea-metamodel
-        env:
-          GH_TOKEN: ${{ secrets.METAMODEL_TOKEN }}
+      - name: Fetch canonical artefacts from Pages repo
+        id: fetch
         run: |
           set -euo pipefail
           REF="${{ steps.ref.outputs.ref }}"
+          mkdir -p public/data
+          cd /tmp
 
-          mkdir -p /tmp/metamodel-fetch
-          cd /tmp/metamodel-fetch
-
-          # Prefer a token from secrets if available; fall back to the
-          # default GITHUB_TOKEN (60 req/hr limit, fine for cron).
-          if [ -n "$GH_TOKEN" ]; then
-            gh auth setup-git >/dev/null
-            git clone --depth=1 --branch="$REF" \
-              "https://x-access-token:${GH_TOKEN}@github.com/technehub-labs/dea-metamodel.git" \
-              upstream
-          else
-            git clone --depth=1 --branch="$REF" \
-              https://github.com/technehub-labs/dea-metamodel.git upstream
-          fi
-
-          cd upstream
-          # Both files are mandatory. Fail the sync if either is missing.
-          # Mandatory artefacts
-          for f in viewer/entity-graph.json viewer/metamodel.svg; do
-            if [ ! -f "$f" ]; then
-              echo "::error::Missing canonical artefact: $f"
+          # Mandatory artefacts — both files MUST exist or the sync fails.
+          for entry in \
+            "entity-graph.json|metamodel/entity-graph.json" \
+            "metamodel.svg|metamodel/metamodel.svg"; do
+            f="${entry%|*}"
+            src="${entry#*|}"
+            dst="/home/runner/work/dea-web-viewer/dea-web-viewer/public/data/$f"
+            url="https://raw.githubusercontent.com/technehub-labs/technehub-labs.github.io/${REF}/${src}"
+            echo "Fetching $url -> $dst"
+            if ! curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$dst"; then
+              echo "::error::Missing canonical artefact at $url"
               exit 1
             fi
           done
 
           # Optional artefact: the canonical PUML the SVG was rendered from.
-          # If present we pull it so the viewer can render the interactive
-          # topology from the same source as the SVG.
-          if [ ! -f "metamodel-puml/metamodel-v2.puml" ]; then
-            echo "::warning::metamodel-puml/metamodel-v2.puml not found — \
-              viewer will fall back to the SVG for relationship topology."
+          # The Pages repo does NOT publish metamodel.puml today; if the
+          # private dea-metamodel bot later makes it public we will pick it
+          # up automatically here.
+          puml_url="https://raw.githubusercontent.com/technehub-labs/technehub-labs.github.io/${REF}/metamodel/metamodel.puml"
+          if curl -fsSL --retry 2 --retry-delay 2 "$puml_url" -o /home/runner/work/dea-web-viewer/dea-web-viewer/public/data/metamodel.puml 2>/dev/null; then
+            echo "Pulled optional metamodel.puml"
+          else
+            echo "::notice::metamodel.puml not published in the Pages repo — skipping"
+            rm -f /home/runner/work/dea-web-viewer/dea-web-viewer/public/data/metamodel.puml
           fi
 
           # Pull the canonical pin: the metamodel_version declared in
           # entity-graph.json. We surface this in the commit message so
           # reviewers see exactly which version they are running.
           META_VERSION=$(python3 -c \
-            "import json; print(json.load(open('viewer/entity-graph.json'))['metamodel_version'])")
+            "import json; print(json.load(open('/home/runner/work/dea-web-viewer/dea-web-viewer/public/data/entity-graph.json'))['metamodel_version'])")
           echo "metamodel_version=$META_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Synced metamodel_version=$META_VERSION"
 
       - name: Copy artefacts into this repo
         run: |
           set -euo pipefail
-          mkdir -p public/data
-          cp /tmp/metamodel-fetch/upstream/viewer/entity-graph.json public/data/entity-graph.json
-          cp /tmp/metamodel-fetch/upstream/viewer/metamodel.svg     public/data/metamodel.svg
-          if [ -f /tmp/metamodel-fetch/upstream/metamodel-puml/metamodel-v2.puml ]; then
-            cp /tmp/metamodel-fetch/upstream/metamodel-puml/metamodel-v2.puml public/data/metamodel.puml
-          else
-            rm -f public/data/metamodel.puml
-          fi
-
+          # The fetch step already wrote into public/data/ directly.
           ls -la public/data/
           echo "---"
           echo "entity-graph.json: $(wc -c < public/data/entity-graph.json) bytes, $(python3 -c 'import json; print(len(json.load(open("public/data/entity-graph.json"))["entities"]))') entities"
@@ -152,7 +149,7 @@ jobs:
           graph = Path("public/data/entity-graph.json")
           svg   = Path("public/data/metamodel.svg")
 
-          # 1. JSON Schema — minimal but matches what dea-metamodel ships.
+          # 1. JSON Schema — minimal but matches what the metamodel bot ships.
           data = json.loads(graph.read_text())
           for key in ("metamodel_version", "entities"):
               if key not in data:
@@ -169,16 +166,12 @@ jobs:
                   sys.exit(1)
           print(f"OK — {len(data['entities'])} entities validated against schema")
 
-          # 2. SVG — must be a PlantUML-style SVG with id="elem_<ALIAS>"
-          # markers for the interactive layer to attach to.
-          #
-          # NOTE: PlantUML 1.2024.x emits SVG on a single line, so
-          # svg_text.count('id="elem_') returns the number of LINES with
-          # a match — typically 1 for a single-line SVG. Use re.findall
-          # to count occurrences instead.
-          import re as _re
+          # 2. SVG — must contain id="elem_<ALIAS>" markers for the
+          # interactive layer to attach to. PlantUML 1.2024.x emits a
+          # single-line SVG so we use re.findall (not str.count) to count
+          # occurrences across the full string.
           svg_text = svg.read_text()
-          elem_count = len(_re.findall(r'id="elem_[A-Z]+"', svg_text))
+          elem_count = len(re.findall(r'id="elem_[A-Z]+"', svg_text))
           if elem_count < 1:
               print("::error::metamodel.svg has no id=\"elem_*\" markers")
               sys.exit(1)
@@ -208,15 +201,17 @@ jobs:
         run: |
           git add public/data/entity-graph.json public/data/metamodel.svg
           git add public/data/metamodel.puml 2>/dev/null || true
-          git commit -m "chore(sync): pull artefacts from dea-metamodel@${META_VERSION}
+          git commit -m "chore(sync): pull artefacts from technehub-labs.github.io@${META_VERSION}
 
           Auto-generated by .github/workflows/sync-from-dea-metamodel.yml.
           The viewer NEVER hand-edits public/data/* — these artefacts are
-          pulled from technehub-labs/dea-metamodel so the viewer always
-          reflects the canonical metamodel graph.
+          pulled from the publication point of the metamodel viewer so the
+          viewer always reflects what users see at
+          https://technehub-labs.github.io/metamodel/.
 
           If you intended to change the metamodel, edit it in
-          technehub-labs/dea-metamodel and re-run this workflow."
+          technehub-labs/dea-metamodel and ensure the regeneration bot
+          publishes the new artefacts to technehub-labs.github.io@main."
           git push
           echo "Pushed synced artefacts."
 
