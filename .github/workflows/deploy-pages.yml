@@ -17,18 +17,14 @@ permissions:
   pages: write
   id-token: write
 
-# Don't deploy PR previews — only main.
-if: github.event_name != 'push' || github.ref == 'refs/heads/main'
-
-environment:
-  name: github-pages
-  url: ${{ steps.deployment.outputs.page_url }}
-
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Don't deploy PR previews — only main. On workflow_dispatch runs
+    # (no push event) we always proceed.
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
