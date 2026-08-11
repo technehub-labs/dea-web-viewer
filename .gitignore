@@ -1,0 +1,16 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# CI-managed by .github/workflows/sync-from-dea-metamodel.yml.
+# Hand-edits will be overwritten on the next sync.
+public/data/
+
+# Local sandbox
+.sandbox/
+*.bak
