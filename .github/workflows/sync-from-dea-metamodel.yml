@@ -171,8 +171,14 @@ jobs:
 
           # 2. SVG — must be a PlantUML-style SVG with id="elem_<ALIAS>"
           # markers for the interactive layer to attach to.
+          #
+          # NOTE: PlantUML 1.2024.x emits SVG on a single line, so
+          # svg_text.count('id="elem_') returns the number of LINES with
+          # a match — typically 1 for a single-line SVG. Use re.findall
+          # to count occurrences instead.
+          import re as _re
           svg_text = svg.read_text()
-          elem_count = svg_text.count('id="elem_')
+          elem_count = len(_re.findall(r'id="elem_[A-Z]+"', svg_text))
           if elem_count < 1:
               print("::error::metamodel.svg has no id=\"elem_*\" markers")
               sys.exit(1)
