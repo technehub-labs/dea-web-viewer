@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same branch on new pushes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-build:
+    name: Lint + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Type check (tsc --noEmit)
+        run: npm run lint
+
+      - name: Verify synced artefacts are present
+        run: |
+          set -euo pipefail
+          for f in public/data/entity-graph.json public/data/metamodel.svg public/data/metamodel.puml; do
+            if [ ! -s "$f" ]; then
+              echo "::error::Missing or empty synced artefact: $f"
+              echo "Run the sync workflow first:"
+              echo "  gh workflow run sync-from-dea-metamodel.yml"
+              exit 1
+            fi
+          done
+          echo "OK — synced artefacts present"
+
+      - name: Build (vite build)
+        run: npm run build
+
+      - name: Upload build artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dea-web-viewer-dist
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
