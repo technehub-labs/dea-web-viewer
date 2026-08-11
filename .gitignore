@@ -7,10 +7,12 @@ coverage/
 .env*
 !.env.example
 
-# CI-managed by .github/workflows/sync-from-dea-metamodel.yml.
-# Hand-edits will be overwritten on the next sync.
-public/data/
-
 # Local sandbox
 .sandbox/
 *.bak
+
+# public/data/* is intentionally TRACKED in git so the bot can commit
+# synced artefacts. The .github/workflows/sync-from-dea-metamodel.yml
+# workflow owns these files; hand-edits will be overwritten by the bot
+# on the next sync. See that workflow's "Detect hand-edits" step for
+# how drift is flagged.
