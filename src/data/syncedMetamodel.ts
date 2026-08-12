@@ -2,19 +2,24 @@
  * syncedMetamodel.ts
  *
  * The single source of truth for everything the viewer renders.
- * At runtime we load the artefacts that the
- * `.github/workflows/sync-from-dea-metamodel.yml` workflow pulls from
- * `technehub-labs/dea-metamodel`:
+ * The artefacts are BAKED INTO THE BUNDLE AT BUILD TIME — no runtime
+ * fetching, no base-path / 404 failure modes:
  *
- *   /data/entity-graph.json — entities, classes, catalog linkage
- *   /data/metamodel.puml    — PlantUML source (relationships, layer
- *                             assignments, entity attributes)
- *   /data/metamodel.svg     — the canonical SVG (used for the
- *                             "Official SVG" view)
+ *   public/data/entity-graph.json — entities, classes, catalog linkage
+ *   public/data/metamodel.puml    — PlantUML source (relationships,
+ *                                   layer assignments, attributes)
+ *   public/data/metamodel.svg     — the canonical SVG ("Official SVG"
+ *                                   view)
  *
- * Hand-edits to /public/data/* are overwritten by the CI sync, so this
- * module never falls back to baked-in copies. If the synced files are
- * missing we fail loudly — the app cannot operate without them.
+ * The chain when the metamodel changes upstream:
+ *   dea-metamodel → technehub-labs.github.io (publish) →
+ *   sync-from-dea-metamodel.yml commits public/data/* here →
+ *   the push dispatches deploy-pages.yml → vite build inlines the new
+ *   artefacts → the deployed site IS the new metamodel.
+ *
+ * Hand-edits to public/data/* are overwritten by the CI sync, so this
+ * module never falls back to anything else. A missing/invalid artefact
+ * fails the BUILD (vite/tsc import error), not the running app.
  *
  * The data shape we expose is intentionally compatible with the
  * MetamodelAST the components already expect, so the rest of the app
@@ -28,6 +33,12 @@ import type {
   MetamodelRelationship,
   LayerId,
 } from '../types';
+
+/* ------- Build-time artefact imports (inlined by vite) ------------ */
+
+import graphJson from '../../public/data/entity-graph.json';
+import pumlRaw from '../../public/data/metamodel.puml?raw';
+import svgRaw from '../../public/data/metamodel.svg?raw';
 
 /* ----------------------- Entity-graph shape ----------------------- */
 
@@ -59,34 +70,15 @@ let _puml: string | null = null;
 let _svg: string | null = null;
 let _metaVersion: string | null = null;
 
-async function fetchText(url: string): Promise<string> {
-  const res = await fetch(url, { cache: 'no-cache' });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
-  }
-  return res.text();
-}
-
-async function fetchJson<T>(url: string): Promise<T> {
-  const text = await fetchText(url);
-  try {
-    return JSON.parse(text) as T;
-  } catch (e: any) {
-    throw new Error(`Invalid JSON at ${url}: ${e.message}`);
-  }
-}
-
 export async function loadSyncedArtefacts(): Promise<void> {
-  // Load all three in parallel. If any of them 404s we want to surface
-  // it immediately — the viewer cannot render without them.
-  const [, , json] = await Promise.all([
-    fetchText('/data/metamodel.svg').then((t) => (_svg = t)),
-    fetchText('/data/metamodel.puml').then((t) => (_puml = t)),
-    fetchJson<EntityGraph>('/data/entity-graph.json').then((g) => {
-      _graph = g;
-      _metaVersion = g.metamodel_version;
-    }),
-  ]);
+  // Artefacts are baked into the bundle at build time — this just
+  // publishes them into module state. Kept async so callers (App.tsx)
+  // don't change. A missing artefact fails the vite build upstream,
+  // so by the time this runs the data is guaranteed present.
+  _graph = graphJson as EntityGraph;
+  _puml = pumlRaw;
+  _svg = svgRaw;
+  _metaVersion = _graph.metamodel_version;
 }
 
 export function getMetaVersion(): string {
