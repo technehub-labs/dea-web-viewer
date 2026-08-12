@@ -25,8 +25,9 @@ export default defineConfig(() => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
     build: {
-      // /data/* and /assets/* are absolute paths from the SPA root;
-      // base already handles the repo-name prefix.
+      // Metamodel artefacts are baked into the bundle at build time
+      // (see src/data/syncedMetamodel.ts) — no runtime /data/* fetches,
+      // so base is the only path concern and it handles /assets/*.
       outDir: 'dist',
       sourcemap: false,
     },

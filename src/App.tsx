@@ -32,8 +32,9 @@ export default function App() {
   const [impactTrace, setImpactTrace] = useState<ImpactTrace | null>(null);
 
   /* ---------------------------------------------------------------
-   * Load the synced artefacts once at startup. The artefacts live at
-   * /public/data/* and are pulled in by the CI sync workflow.
+   * Load the synced artefacts once at startup. The artefacts live in
+   * public/data/* (owned by the CI sync workflow) and are baked into
+   * the JS bundle at build time — there is no runtime fetching.
    * --------------------------------------------------------------- */
   useEffect(() => {
     let cancelled = false;
@@ -49,7 +50,7 @@ export default function App() {
         if (cancelled) return;
         setLoadError(
           e?.message ??
-            'Failed to load the synced metamodel artefacts. Run the sync workflow or check /public/data/.'
+            'Failed to initialise the metamodel viewer. Artefacts are baked in at build time — a failure here means the deployed bundle is stale or corrupt; re-run the Deploy to GitHub Pages workflow.'
         );
       }
     })();
