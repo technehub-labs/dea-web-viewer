@@ -46,6 +46,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   sync:
@@ -216,6 +217,17 @@ jobs:
           publishes the new artefacts to technehub-labs.github.io@main."
           git push
           echo "Pushed synced artefacts."
+
+      - name: Trigger Pages deploy
+        # Pushes made with the default GITHUB_TOKEN do NOT fire
+        # `on: push` workflows (GitHub recursion guard), so without
+        # this step a sync commit would never reach the live site.
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run deploy-pages.yml --ref main
+          echo "Dispatched deploy-pages.yml for the sync commit."
 
       - name: Upload synced artefacts
         if: always()
