@@ -417,7 +417,8 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({
       layer2: 0,
       layer3: 0,
       layer4: 0,
-      layer5: 0
+      layer5: 0,
+      dim: 0
     };
     ast.layers.forEach((layer, idx) => {
       map[layer.id] = startLayerTop + idx * (defaultLayerHeight + layerGap);
@@ -435,7 +436,8 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({
       layer2: [],
       layer3: [],
       layer4: [],
-      layer5: []
+      layer5: [],
+      dim: []
     };
 
     ast.entities.forEach((ent) => {
@@ -1192,7 +1194,7 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({
 
                 {/* Node Footer: Layer Indicator */}
                 <div className="flex items-center justify-between pt-1 border-t border-slate-800/50 text-[9px] text-slate-500">
-                  <span className="truncate">L{entity.layerId.replace('layer', '')}</span>
+                  <span className="truncate">{entity.layerId === 'dim' ? 'DIM' : `L${entity.layerId.replace('layer', '')}`}</span>
                   <span className="text-blue-400 font-medium group-hover:underline">
                     Inspect →
                   </span>

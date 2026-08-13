@@ -97,6 +97,7 @@ export default function App() {
       layer3: 0,
       layer4: 0,
       layer5: 0,
+      dim: 0,
     };
     if (!ast) return counts;
     ast.entities.forEach((ent) => {
