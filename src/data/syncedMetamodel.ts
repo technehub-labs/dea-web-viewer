@@ -46,13 +46,40 @@ export interface EntityGraphEntity {
   entity_id: string;        // dea:entity-strategic-objective
   class_alias: string;      // SO
   display_name: string;     // Strategic Objective
-  layer: string;            // L1
-  layer_name: string;       // Strategic & Investment
-  color?: string;           // #E8F8F5
-  catalog_repo: string;     // dea-catalog-strategic-objectives
-  repo_url: string;         // https://github.com/...
+  layer?: string;           // L1 — absent for dimension entities (v0.2.0, e.g. MTR)
+  layer_name?: string;      // Ecosystem & Value Network — absent for dimension entities
+  dimension?: string;       // measurement-dimension (v0.2.0 dimension entities)
+  color?: string;           // #2DD4BF
+  catalog_repo: string | null;
+  repo_url: string | null;  // https://github.com/...
   status?: 'existing' | 'existing-extended' | 'planned' | 'scaffold';
   description?: string;
+  specializes?: string;     // parent class_alias (ADR-0002 D3)
+  scope_layers?: string[];  // metric entities: which layers they may evaluate
+  measured_by?: string[];   // measurable entities: metric aliases
+}
+
+export interface EntityGraphRelationship {
+  from: string;
+  to: string;
+  label: string;
+  rel_type: 'realization' | 'composition' | 'aggregation' | 'dependency' | 'flow' | 'governance' | 'association';
+  cardinality: string;      // "1:0..N"
+  style: 'solid' | 'dashed'; // derived from rel_type (deprecated, back-compat)
+}
+
+export interface EntityGraphLayer {
+  id: string;               // L1
+  name: string;             // Ecosystem & Value Network
+  qualifier?: string;
+  color?: string;
+  dark_color?: string;
+}
+
+export interface EntityGraphDimension {
+  id: string;               // measurement-dimension
+  name: string;             // Measurement Dimension
+  kind?: string;
 }
 
 export interface EntityGraph {
@@ -60,7 +87,10 @@ export interface EntityGraph {
   description?: string;
   viewer_route?: string;
   viewer_url?: string;
+  layers?: EntityGraphLayer[];
+  dimensions?: EntityGraphDimension[];
   entities: EntityGraphEntity[];
+  relationships?: EntityGraphRelationship[];
 }
 
 /* ----------------------- Runtime loader --------------------------- */
@@ -129,7 +159,7 @@ export function parseSyncedPuml(pumlText: string): {
   const layerOrder: Record<string, number> = { L1: 1, L2: 2, L3: 3, L4: 4, L5: 5 };
   const layerColors: Record<string, string> = {};
   for (const e of graph.entities) {
-    if (!layerColors[e.layer]) {
+    if (e.layer && !layerColors[e.layer]) {
       layerColors[e.layer] = e.color ?? '#E8F8F5';
     }
   }
@@ -139,14 +169,32 @@ export function parseSyncedPuml(pumlText: string): {
     layers.push({
       id: `layer${num}` as LayerId,
       number: num,
-      name: sample.layer_name,
+      name: sample.layer_name ?? lid,
       subtitle: lid,
       color: layerColors[lid] ?? '#E8F8F5',
       borderColor: '#1ABC9C', // harmonised visual; see theme
       // ---- legacy bag (kept for components that still read it) ----
       badgeBg: '',
       textColor: '',
-      description: `${sample.layer_name} (${lid})`,
+      description: `${sample.layer_name ?? lid} (${lid})`,
+    });
+  }
+
+  // v0.2.0 (ADR-0002 D1): dimension entities (no home layer, e.g. MTR) get a
+  // cross-cutting pseudo-layer so the canvas renders them below L5.
+  const dimEntities = graph.entities.filter((e) => !e.layer);
+  if (dimEntities.length) {
+    const dimMeta = graph.dimensions?.find((d) => d.id === dimEntities[0].dimension);
+    layers.push({
+      id: 'dim' as LayerId,
+      number: 6,
+      name: dimMeta?.name ?? 'Measurement Dimension',
+      subtitle: 'DIM',
+      color: dimEntities[0].color ?? '#9CA3AF',
+      borderColor: '#9CA3AF',
+      badgeBg: '',
+      textColor: '',
+      description: `${dimMeta?.name ?? 'Measurement Dimension'} (cross-cutting — not an architecture layer)`,
     });
   }
 
@@ -154,15 +202,16 @@ export function parseSyncedPuml(pumlText: string): {
   // is the master record; the PUML is parsed only for attributes.
   const entityByAlias: Record<string, MetamodelEntity> = {};
   for (const e of graph.entities) {
-    const layerId = `layer${layerOrder[e.layer] ?? 1}` as LayerId;
+    const isDim = !e.layer;
+    const layerId = (isDim ? 'dim' : `layer${layerOrder[e.layer!] ?? 1}`) as LayerId;
     entityByAlias[e.class_alias] = {
       id: e.class_alias,
       name: e.display_name,
       entity_id: e.entity_id,
       layerId,
-      layer_name: e.layer_name,
-      catalog_repo: e.catalog_repo,
-      repo_url: e.repo_url,
+      layer_name: e.layer_name ?? 'Measurement Dimension',
+      catalog_repo: e.catalog_repo ?? undefined,
+      repo_url: e.repo_url ?? undefined,
       status: e.status,
       description: e.description,
       attributes: [],
@@ -217,16 +266,42 @@ export function parseSyncedPuml(pumlText: string): {
       continue;
     }
 
-    // ALIAS1 --> ALIAS2 : "label"
-    const relMatch = line.match(/^([A-Za-z0-9_]+)\s*(-->|--|\.->|\.-)\s*([A-Za-z0-9_]+)(\s*:\s*"([^"]+)")?$/);
-    if (relMatch) {
+    // ALIAS1 --> ALIAS2 : "label"   (only used for pre-v0.2.0 graphs —
+    // v0.2.0 graphs carry relationships[] with rel_type + cardinality)
+    if (!graph.relationships) {
+      const relMatch = line.match(/^([A-Za-z0-9_]+)\s*(-->|--|\.->|\.\.|-)\s*([A-Za-z0-9_]+)(\s*:\s*"([^"]+)")?$/);
+      if (relMatch) {
+        relationships.push({
+          from: relMatch[1],
+          to: relMatch[3],
+          label: relMatch[5] ?? '',
+          type: relMatch[2].includes('.') ? 'dashed' : 'solid',
+        });
+        continue;
+      }
+    }
+  }
+
+  // v0.2.0: relationships come from the graph (typed, with cardinality)…
+  if (graph.relationships) {
+    for (const r of graph.relationships) {
       relationships.push({
-        from: relMatch[1],
-        to: relMatch[3],
-        label: relMatch[5] ?? '',
-        type: relMatch[2].includes('.') ? 'dashed' : 'solid',
+        from: r.from,
+        to: r.to,
+        label: r.cardinality ? `${r.label} [${r.cardinality}]` : r.label,
+        type: r.style,
       });
-      continue;
+    }
+  }
+  // …plus specialization edges derived from entity.specializes (ADR-0002 D3).
+  for (const e of graph.entities) {
+    if (e.specializes) {
+      relationships.push({
+        from: e.class_alias,
+        to: e.specializes,
+        label: 'specializes',
+        type: 'solid',
+      });
     }
   }
 

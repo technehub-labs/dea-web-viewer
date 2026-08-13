@@ -1,4 +1,4 @@
-export type LayerId = 'layer1' | 'layer2' | 'layer3' | 'layer4' | 'layer5';
+export type LayerId = 'layer1' | 'layer2' | 'layer3' | 'layer4' | 'layer5' | 'dim';
 
 export interface MetamodelAttribute {
   name: string;
