@@ -158,10 +158,15 @@ jobs:
                   sys.exit(1)
           for ent in data["entities"]:
               for key in ("entity_id", "class_alias", "display_name",
-                          "layer", "catalog_repo", "repo_url"):
+                          "catalog_repo", "repo_url"):
                   if key not in ent:
                       print(f"::error::entity missing required key: {key}")
                       sys.exit(1)
+              # OpenDEAM v0.2.0 (ADR-0002 D1): dimension entities (e.g. MTR)
+              # carry `dimension` instead of `layer`.
+              if "layer" not in ent and "dimension" not in ent:
+                  print(f"::error::entity {ent.get('class_alias','?')} has neither layer nor dimension")
+                  sys.exit(1)
               if not re.match(r"^dea:entity-[a-z-]+$", ent["entity_id"]):
                   print(f"::error::bad entity_id: {ent['entity_id']}")
                   sys.exit(1)
