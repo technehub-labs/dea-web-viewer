@@ -182,19 +182,27 @@ export function parseSyncedPuml(pumlText: string): {
 
   // v0.2.0 (ADR-0002 D1): dimension entities (no home layer, e.g. MTR) get a
   // cross-cutting pseudo-layer so the canvas renders them below L5.
+  // v0.4.0 (ADR-0004 D2): CON (semantic-dimension) joins MTR — resolve each
+  // entity's dimension name from graph.dimensions instead of assuming one.
   const dimEntities = graph.entities.filter((e) => !e.layer);
+  const dimNameById = new Map(
+    (graph.dimensions ?? []).map((d) => [d.id, d.name] as const),
+  );
+  const dimNameOf = (e: (typeof dimEntities)[number]) =>
+    dimNameById.get(e.dimension ?? '') ?? e.dimension ?? 'Dimension';
   if (dimEntities.length) {
-    const dimMeta = graph.dimensions?.find((d) => d.id === dimEntities[0].dimension);
+    const distinctDims = [...new Set(dimEntities.map(dimNameOf))];
+    const dimLabel = distinctDims.length === 1 ? distinctDims[0] : 'Cross-Cutting Dimensions';
     layers.push({
       id: 'dim' as LayerId,
       number: 6,
-      name: dimMeta?.name ?? 'Measurement Dimension',
+      name: dimLabel,
       subtitle: 'DIM',
       color: dimEntities[0].color ?? '#9CA3AF',
       borderColor: '#9CA3AF',
       badgeBg: '',
       textColor: '',
-      description: `${dimMeta?.name ?? 'Measurement Dimension'} (cross-cutting — not an architecture layer)`,
+      description: `${distinctDims.join(' + ')} (cross-cutting — not an architecture layer)`,
     });
   }
 
@@ -209,7 +217,7 @@ export function parseSyncedPuml(pumlText: string): {
       name: e.display_name,
       entity_id: e.entity_id,
       layerId,
-      layer_name: e.layer_name ?? 'Measurement Dimension',
+      layer_name: e.layer_name ?? (isDim ? dimNameOf(e) : ''),
       catalog_repo: e.catalog_repo ?? undefined,
       repo_url: e.repo_url ?? undefined,
       status: e.status,
