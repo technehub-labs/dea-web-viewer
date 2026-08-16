@@ -48,7 +48,7 @@ public/data/metamodel.svg       # canonical PlantUML render
 public/data/metamodel.puml      # optional — only if upstream publishes it
 ```
 
-The sync source is the Pages repo (not `dea-metamodel`, which is private)
+The sync source is the Pages repo (not `dea-metamodel` directly)
 because the Pages repo is what users actually see at
 `https://technehub-labs.github.io/metamodel/` and is publicly fetchable
 from CI without any PAT secret.
