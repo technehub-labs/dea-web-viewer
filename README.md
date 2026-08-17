@@ -93,6 +93,12 @@ Viewer-relevant semantics, in order:
   never render as a current edge (T004). The **timeline, state selector, baseline↔target
   comparison and delta visualization** (CR-6 §42 Phase 9) consume this layer once the 18
   lifecycle entities are allocated upstream.
+- **CR-7 (v0.12.0)** — the causal/governance layer: Intent → Objective → Policy → Decision →
+  Action → Change → Outcome → Evidence → reassessment. Agents are enterprise Actors with
+  explicit authority, policy boundaries, autonomy levels and human oversight — *participants
+  in the semantic system, not its center*. Key viewer-relevant distinctions: planned vs
+  actual edges, permitted vs prohibited agent actions, approval gates as first-class nodes.
+  The 32 governance/agentic entities await upstream allocation like the CR-5/CR-6 layers.
 
 ```mermaid
 graph TD
