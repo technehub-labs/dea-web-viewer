@@ -99,6 +99,13 @@ Viewer-relevant semantics, in order:
   in the semantic system, not its center*. Key viewer-relevant distinctions: planned vs
   actual edges, permitted vs prohibited agent actions, approval gates as first-class nodes.
   The 32 governance/agentic entities await upstream allocation like the CR-5/CR-6 layers.
+- **CR-8 (v1.0.0)** — the consolidation into a formal specification. **The viewer is now
+  explicitly a consumer, never a definer** (CR-8 §47-§48, §67): dependency direction is
+  specification → schema → validator → reference models → viewer. Presentation hints
+  (icons, groups, colors, planned-vs-current edge styles, state overlays) live in
+  `dea-metamodel/visualization/profile/` so future consumers (CLI, IDE, graph DB, BI, AI
+  agents) need no semantic changes. Golden and negative reference models
+  (`dea-metamodel/models/`) are the canonical fixtures any consumer can test against.
 
 ```mermaid
 graph TD
