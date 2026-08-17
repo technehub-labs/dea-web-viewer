@@ -65,6 +65,37 @@ sync:
 gh workflow run sync-from-dea-metamodel.yml --repo technehub-labs/dea-web-viewer
 ```
 
+## The semantics being rendered
+
+The graph this viewer displays is governed by the CR programme in
+[`dea-metamodel/change-requests/`](https://github.com/technehub-labs/dea-metamodel/tree/main/change-requests).
+Viewer-relevant semantics, in order:
+
+- **CR-1/2/3** — one normative model; typed, directed relationships; no relationship
+  state on entities. This is why the Interactive/Traceability modes can trust the
+  graph topology.
+- **CR-4 (v0.9.0)** — every entity carries `membership: core | profile/<id>`. The
+  18-anchor OpenDEA Core is the stable semantic skeleton; the 10 profiles (business,
+  digital, data, technology, ai, ecosystem, governance, assessment, dmm, ecf) are
+  specialized viewpoints that extend it. Core/Profile rendering modes are a planned
+  consumer of this field.
+- **CR-5 (v0.10.0)** — assessment is a *separate semantic layer* over the architecture
+  graph: `Assessment → Result → (Score | MaturityLevel) + Evidence + Confidence`, with
+  `AssessmentGap ──addressed-by──> Change`. Maturity is never an intrinsic entity
+  property (CI rule A008). DMMv5 plugs in as a profile whose dimensions `assess` DEA
+  entities. The **assessment overlay / maturity heatmap** view (CR-5 §39 Phase 9) will
+  render this layer once the 28 assessment entities are allocated into the upstream
+  OpenDEAM root model and flow into `entity-graph.json`.
+
+```mermaid
+graph TD
+    G["entity-graph.json (this viewer's data)"]
+    G --> CORE["Core anchors<br/>what the enterprise is"]
+    G --> PROF["Profile entities<br/>domain viewpoints"]
+    ASS["Assessment layer (CR-5)<br/>how the enterprise is assessed"] -. pending upstream allocation .-> G
+    ASS -. assesses .-> CORE
+```
+
 ## Sync schedule
 
 The bot runs:
