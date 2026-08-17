@@ -86,6 +86,13 @@ Viewer-relevant semantics, in order:
   entities. The **assessment overlay / maturity heatmap** view (CR-5 §39 Phase 9) will
   render this layer once the 28 assessment entities are allocated into the upstream
   OpenDEAM root model and flow into `entity-graph.json`.
+- **CR-6 (v0.11.0)** — architecture is a *time-dependent state*, not a static catalogue.
+  Five clocks (transaction/valid/observation/planned/effective), per-type lifecycles and
+  audit events, Baseline/Current/Target/Transition/Scenario states, snapshots, derived
+  deltas, version chains. Relationships carry temporal validity — a *planned* edge must
+  never render as a current edge (T004). The **timeline, state selector, baseline↔target
+  comparison and delta visualization** (CR-6 §42 Phase 9) consume this layer once the 18
+  lifecycle entities are allocated upstream.
 
 ```mermaid
 graph TD
