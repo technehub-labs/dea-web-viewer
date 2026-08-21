@@ -54,7 +54,8 @@ export type ViewMode =
   | 'canonical-svg'
   | 'matrix'
   | 'traceability'
-  | 'catalogs';
+  | 'catalogs'
+  | 'maturity-radar'   // CR-MM-02-VIEWER — gated behind dea.experimental.maturityV2 feature flag;
 
 export interface ImpactTrace {
   sourceId: string;

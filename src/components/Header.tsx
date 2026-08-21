@@ -11,15 +11,10 @@ interface HeaderProps {
   entityCount: number;
   relCount: number;
   metamodelVersion: string;
+  /** Tab list, supplied by App.tsx so it can hide experimental tabs when flags are off. */
+  tabs: { id: ViewMode; label: string; Icon: React.ComponentType<any> }[];
 }
 
-const tabs: { id: ViewMode; label: string; Icon: React.ComponentType<any> }[] = [
-  { id: 'canonical-svg', label: 'Canonical SVG', Icon: FileCode },
-  { id: 'interactive',    label: 'Interactive',  Icon: Network },
-  { id: 'matrix',         label: 'Matrix',       Icon: Grid3X3 },
-  { id: 'traceability',   label: 'Traceability', Icon: Route },
-  { id: 'catalogs',       label: 'Catalogs',     Icon: BookOpen },
-];
 
 export const Header: React.FC<HeaderProps> = ({
   activeView,
@@ -30,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   entityCount,
   relCount,
   metamodelVersion,
+  tabs,
 }) => {
   return (
     <nav className="navbar">
