@@ -33,6 +33,31 @@ A React 19 + Vite + TypeScript single-page app with five modes:
 | **Matrix** | Entity × relationship grid view |
 | **Traceability** | Path finder between any two entities via BFS shortest path |
 | **Catalogs** | Card grid of every entity in the synced graph, filterable by layer and status, with one-click link to its catalog repo |
+| **Maturity radar** (experimental, default off) | Dual-band v1+v2 maturity score radar — renders the canonical v2 maturity scoring bands (CR-014) overlayed on the legacy v1 linear bands, with the CR-014 worked-example score (80) → effort-adjusted value 49.2 visible. Consumer for `dea-cli maturity score` (CR-MM-02). Gated behind `dea.experimental.maturityV2` feature flag — see [`src/lib/feature-flags.ts`](src/lib/feature-flags.ts). |
+
+## View modes (maturity radar — feature flag)
+
+The 6th mode (`maturity-radar`) is **experimental and off by default**. To preview
+locally:
+
+```bash
+# Toggle the flag in the browser devtools console (the radar tab then appears in the nav)
+# setExperimentalFlag('maturityV2', true)
+```
+
+Or via environment variable at build time:
+
+```bash
+VITE_MATURITY_V2=1 npm run dev
+```
+
+Source of truth: `technehub-labs/dea-metamodel/assessment-models/maturity/`
+(CR-014 / CR-MM-01 / CR-MM-01.1). The `MaturityRadar` component fetches the YAML
+via `loadMaturityData()` (which `asserts drift` against the inlined `V2_BANDS`
+canonical literal — drift falls back to the canonical). Until the
+`sync-maturity-from-dea-metamodel.yml` workflow lands a vendored copy at
+`public/data/maturity/`, the radar uses the inlined canonicals only.
+
 
 ## Source of truth
 

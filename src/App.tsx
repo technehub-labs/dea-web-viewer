@@ -19,9 +19,34 @@ import { CanonicalSvgView } from './components/CanonicalSvgView';
 import { MetamodelMatrix } from './components/MetamodelMatrix';
 import { TraceabilityPathFinder } from './components/TraceabilityPathFinder';
 import { CatalogBrowser } from './components/CatalogBrowser';
+import { MaturityRadar } from './components/MaturityRadar';
+import { flag } from './lib/feature-flags';
+import { Network, FileCode, Grid3X3, Route, BookOpen, Radar } from 'lucide-react';
 
 export default function App() {
-  const [ast, setAst] = useState<MetamodelAST | null>(null);
+  // CR-MM-02-VIEWER: MaturityRadar is gated behind the `dea.experimental.maturityV2`
+  // feature flag. Default = OFF. To preview locally, open browser devtools
+  // console: setExperimentalFlag('maturityV2', true). The flag also gates the
+  // "maturity-radar" nav option so the tab is hidden by default.
+  const maturityV2Enabled = flag('maturityV2')
+  const tabs = maturityV2Enabled
+    ? [
+        { id: 'canonical-svg'   as const, label: 'Canonical SVG',   Icon: FileCode },
+        { id: 'interactive'     as const, label: 'Interactive',     Icon: Network },
+        { id: 'matrix'          as const, label: 'Matrix',          Icon: Grid3X3 },
+        { id: 'traceability'    as const, label: 'Traceability',    Icon: Route },
+        { id: 'catalogs'        as const, label: 'Catalogs',        Icon: BookOpen },
+        { id: 'maturity-radar'  as const, label: 'Maturity radar',  Icon: Radar },
+      ]
+    : [
+        { id: 'canonical-svg'   as const, label: 'Canonical SVG',   Icon: FileCode },
+        { id: 'interactive'     as const, label: 'Interactive',     Icon: Network },
+        { id: 'matrix'          as const, label: 'Matrix',          Icon: Grid3X3 },
+        { id: 'traceability'    as const, label: 'Traceability',    Icon: Route },
+        { id: 'catalogs'        as const, label: 'Catalogs',        Icon: BookOpen },
+      ]
+  const availableViews = tabs.map(t => t.id)
+const [ast, setAst] = useState<MetamodelAST | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [metamodelVersion, setMetamodelVersion] = useState<string>('…');
 
@@ -197,8 +222,12 @@ export default function App() {
   return (
     <div className="app-shell">
       <Header
+        tabs={tabs}
         activeView={activeView}
-        setActiveView={setActiveView}
+        setActiveView={(v) => {
+          if (!availableViews.includes(v)) return
+          setActiveView(v)
+        }}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         onReset={handleReset}
@@ -266,6 +295,12 @@ export default function App() {
               setActiveView('canonical-svg');
             }}
           />
+        )}
+
+        {activeView === 'maturity-radar' && maturityV2Enabled && (
+          <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
+            <MaturityRadar />
+          </div>
         )}
 
         {selectedEntity && (

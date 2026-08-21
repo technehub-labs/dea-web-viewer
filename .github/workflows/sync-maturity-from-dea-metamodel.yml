@@ -1,0 +1,175 @@
+name: Sync maturity YAMLs from technehub-labs/dea-metamodel
+
+# Mirrors the canonical maturity scoring artefacts from the assessment
+# sub-tree of technehub-labs/dea-metamodel into public/data/maturity/ on
+# this viewer, so the MaturityRadar component (CR-MM-02-VIEWER) can fetch
+# live data via loadMaturityData() while running a drift check against the
+# inlined canonical V2_BANDS literal.
+#
+# The sync is *one-way*: dea-metamodel is authoritative for the maturity
+# scores. Hand-edits to public/data/maturity/ are overwritten on the next
+# sync — same hand-edit semantics as the existing entity-graph sync.
+#
+# Cadence: schedule + manual + push-to-this-repo (warns reviewers).
+
+on:
+  # Every 6 hours — keeps the viewer following upstream if the canonical
+  # sub-tree evolves without a downstream trigger.
+  schedule:
+    - cron: '0 */6 * * *'
+
+  # Manual force-sync from the Actions tab.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'technehub-labs/dea-metamodel ref to sync from (branch or tag)'
+        required: false
+        default: 'main'
+        type: string
+
+  # If someone hand-edits public/data/maturity/* on this repo, warn
+  # reviewers (the next sync will overwrite).
+  push:
+    branches: [main]
+    paths:
+      - 'public/data/maturity/**'
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dea-web-viewer
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Detect hand-edits to public/data/maturity
+        id: detect
+        run: |
+          if git log -1 --name-only --pretty=format: | \
+                grep -E '^public/data/maturity/' > /dev/null; then
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Hand-edits to public/data/maturity/ detected. Sync will overwrite."
+          else
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve source ref
+        id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
+             [ -n "${{ github.event.inputs.ref }}" ]; then
+            REF="${{ github.event.inputs.ref }}"
+          else
+            REF="main"
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Syncing from technehub-labs/dea-metamodel@$REF"
+
+      - name: Fetch canonical maturity YAMLs
+        run: |
+          set -euo pipefail
+          REF="${{ steps.ref.outputs.ref }}"
+          mkdir -p public/data/maturity
+          # The maturity scoring files live under the assessment-models
+          # sub-tree (canonical landing per CR-014). The v2-beta model
+          # files are vendored as optional data (the radar visualises
+          # only the bands registry).
+          for entry in \
+            "maturity-bands-v2.yaml|assessment-models/maturity/maturity-bands-v2.yaml" \
+            "v2-to-v1-legacy-name-map.yaml|assessment-models/maturity/v2-to-v1-legacy-name-map.yaml"; do
+            f="${entry%|*}"
+            src="${entry#*|}"
+            url="https://raw.githubusercontent.com/technehub-labs/dea-metamodel/${REF}/${src}"
+            dst="public/data/maturity/$f"
+            echo "Fetching $url -> $dst"
+            if ! curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$dst"; then
+              echo "::error::Failed to fetch $url"
+              exit 1
+            fi
+          done
+          ls -la public/data/maturity/
+
+      - name: Validate against maturity-v2-loader contract
+        run: |
+          python3 - <<'PY'
+          """Quick structural check — fails the run if the YAMLs are
+          unreadable or don't expose the bands array."""
+          import yaml, sys
+          from pathlib import Path
+
+          bands = Path("public/data/maturity/maturity-bands-v2.yaml")
+          try:
+              data = yaml.safe_load(bands.read_text())
+          except Exception as e:
+              print(f"::error::maturity-bands-v2.yaml parse failed: {e}")
+              sys.exit(1)
+          if not isinstance(data, dict) or "bands" not in data:
+              print("::error::maturity-bands-v2.yaml missing top-level 'bands' key")
+              sys.exit(1)
+          if len(data["bands"]) != 5:
+              print(f"::error::maturity-bands-v2.yaml has {len(data['bands'])} bands; expected 5")
+              sys.exit(1)
+          print(f"OK — maturity-bands-v2.yaml has {len(data['bands'])} bands")
+
+          # legacy-name map: 5 entries
+          legacy = Path("public/data/maturity/v2-to-v1-legacy-name-map.yaml")
+          try:
+              ldata = yaml.safe_load(legacy.read_text())
+          except Exception as e:
+              print(f"::error::legacy-name-map parse failed: {e}")
+              sys.exit(1)
+          if len(ldata.get("mappings", [])) != 5:
+              print(f"::error::legacy-name-map has {len(ldata.get('mappings', []))} entries; expected 5")
+              sys.exit(1)
+          print(f"OK — legacy-name-map has {len(ldata['mappings'])} entries")
+          PY
+
+      - name: Configure git
+        run: |
+          git config user.name  "dea-maturity-sync-bot"
+          git config user.email "[email protected]"
+
+      - name: Check if artefacts changed
+        id: diff
+        run: |
+          git add public/data/maturity/
+          if git diff --cached --quiet -- public/data/maturity/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Maturity YAMLs identical to committed copy — no commit."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Maturity YAMLs differ — will commit."
+          fi
+
+      - name: Commit + push synced artefacts
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git commit -m "chore(sync): pull maturity YAMLs from dea-metamodel@main
+
+          Auto-generated by .github/workflows/sync-maturity-from-dea-metamodel.yml.
+          Pulls the canonical maturity scoring artefacts from the assessment
+          sub-tree of technehub-labs/dea-metamodel (CR-014 / CR-MM-01.1).
+
+          The MaturityRadar component reads these via loadMaturityData() and
+          asserts drift against the inlined V2_BANDS canonical; on mismatch the
+          loader falls back to the canonical literal — see
+          src/lib/maturity-v2-loader.ts."
+          git push
+          echo "Pushed synced maturity YAMLs."
+
+      - name: Trigger Pages deploy
+        # Pushes with the default GITHUB_TOKEN do NOT fire `on: push`
+        # workflows due to recursion guard; without this step a sync
+        # commit would never reach the live site.
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run deploy-pages.yml --ref main
+          echo "Dispatched deploy-pages.yml for the maturity sync commit."

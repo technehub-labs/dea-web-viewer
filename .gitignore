@@ -5,6 +5,10 @@ coverage/
 .DS_Store
 *.log
 .env*
+
+# CR-MM-02 mock screenshots (intermediate Stage-1 preview output, not for review)
+mocks/
+
 !.env.example
 
 # Local sandbox
