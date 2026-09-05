@@ -148,6 +148,58 @@ export const EntityDrawer: React.FC<EntityDrawerProps> = ({
           </div>
         )}
 
+        {/* CR-CATALOG-STRUCT-07b: catalog content (live counts from CATALOG.yaml). */}
+        {entity.catalog_summary && (
+          <div>
+            <div className="card-title" style={{ marginBottom: 8 }}>
+              <Database size={16} />
+              <span>Catalog content</span>
+            </div>
+            <div
+              style={{
+                background: 'var(--bg)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                padding: 12,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+                fontSize: 12,
+              }}
+              title={`Generated at ${entity.catalog_summary.generated_at} from ${entity.catalog_repo}/CATALOG.yaml`}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ color: 'var(--text-2)' }}>Abbreviation</span>
+                <code style={{ color: 'var(--accent)' }}>{entity.catalog_summary.abbreviation}</code>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ color: 'var(--text-2)' }}>Entities</span>
+                <span>
+                  <strong>{entity.catalog_summary.entity_count}</strong>
+                  <span style={{ color: 'var(--text-2)' }}>
+                    {' '}
+                    ({entity.catalog_summary.canonical} canonical,{' '}
+                    {entity.catalog_summary.candidates} candidates,{' '}
+                    {entity.catalog_summary.retired} retired)
+                  </span>
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ color: 'var(--text-2)' }}>Research files</span>
+                <span>{entity.catalog_summary.research_files}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ color: 'var(--text-2)' }}>Last modified</span>
+                <span>{entity.catalog_summary.latest_modified ?? '-'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ color: 'var(--text-2)' }}>Metamodel version</span>
+                <code style={{ color: 'var(--accent)' }}>{entity.catalog_summary.met_version || '-'}</code>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Impact trace */}
         <button
           onClick={() => onToggleImpactTrace(entity.id)}

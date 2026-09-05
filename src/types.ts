@@ -14,10 +14,28 @@ export interface MetamodelEntity {
   catalog_repo?: string;
   repo_url?: string;
   status?: 'existing' | 'existing-extended' | 'planned' | 'scaffold';
+  // CR-CATALOG-STRUCT-07b: live CATALOG.yaml summary (built-time data).
+  catalog_summary?: CatalogSummary;
   attributes: MetamodelAttribute[];
   x?: number;
   y?: number;
   description?: string;
+}
+
+// CR-CATALOG-STRUCT-07b: live CATALOG.yaml summary for one conformant
+// adopter. Populated at build time by .github/scripts/generate_entity_graph.py
+// from each adopter's CATALOG.yaml (via the cross-repo consumer).
+export interface CatalogSummary {
+  entity_count: number;
+  canonical: number;
+  candidates: number;
+  retired: number;
+  research_files: number;
+  latest_modified: string | null;
+  met_version: string;
+  abbreviation: string;
+  catalog_name: string;
+  generated_at: string; // ISO 8601
 }
 
 export interface MetamodelLayer {

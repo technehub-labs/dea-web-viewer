@@ -57,6 +57,21 @@ export interface EntityGraphEntity {
   specializes?: string;     // parent class_alias (ADR-0002 D3)
   scope_layers?: string[];  // metric entities: which layers they may evaluate
   measured_by?: string[];   // measurable entities: metric aliases
+  // CR-CATALOG-STRUCT-07b: live CATALOG.yaml summary, populated at
+  // build time. Absent for entities whose catalog_repo is null or not
+  // a known conformant adopter.
+  catalog_summary?: {
+    entity_count: number;
+    canonical: number;
+    candidates: number;
+    retired: number;
+    research_files: number;
+    latest_modified: string | null;
+    metamodel_version: string;
+    abbreviation: string;
+    catalog_name: string;
+    generated_at: string;
+  };
 }
 
 export interface EntityGraphRelationship {
@@ -222,6 +237,22 @@ export function parseSyncedPuml(pumlText: string): {
       repo_url: e.repo_url ?? undefined,
       status: e.status,
       description: e.description,
+      // CR-CATALOG-STRUCT-07b: pass through the build-time summary.
+      // The viewer renders this in the entity's Catalog content card.
+      catalog_summary: e.catalog_summary
+        ? {
+            entity_count: e.catalog_summary.entity_count,
+            canonical: e.catalog_summary.canonical,
+            candidates: e.catalog_summary.candidates,
+            retired: e.catalog_summary.retired,
+            research_files: e.catalog_summary.research_files,
+            latest_modified: e.catalog_summary.latest_modified,
+            met_version: e.catalog_summary.metamodel_version,
+            abbreviation: e.catalog_summary.abbreviation,
+            catalog_name: e.catalog_summary.catalog_name,
+            generated_at: e.catalog_summary.generated_at,
+          }
+        : undefined,
       attributes: [],
     };
   }
