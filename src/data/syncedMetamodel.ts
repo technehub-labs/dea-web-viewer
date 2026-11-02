@@ -55,6 +55,11 @@ export interface EntityGraphEntity {
   status?: 'existing' | 'existing-extended' | 'planned' | 'scaffold';
   description?: string;
   specializes?: string;     // parent class_alias (ADR-0002 D3)
+  // CR-4: core/profile membership of this entity.
+  membership?: {
+    kind: string;           // 'core' | 'profile'
+    profile?: string | null; // e.g. 'dea:business' when kind === 'profile'
+  };
   scope_layers?: string[];  // metric entities: which layers they may evaluate
   measured_by?: string[];   // measurable entities: metric aliases
   // CR-CATALOG-STRUCT-07b: live CATALOG.yaml summary, populated at
@@ -237,6 +242,8 @@ export function parseSyncedPuml(pumlText: string): {
       repo_url: e.repo_url ?? undefined,
       status: e.status,
       description: e.description,
+      // CR-4: raw membership passthrough (consumed by src/lib/membership.ts).
+      membershipRaw: e.membership,
       // CR-CATALOG-STRUCT-07b: pass through the build-time summary.
       // The viewer renders this in the entity's Catalog content card.
       catalog_summary: e.catalog_summary
