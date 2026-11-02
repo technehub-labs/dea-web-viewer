@@ -1,6 +1,8 @@
 import React from 'react';
 import type { ViewMode } from '../types';
-import { RotateCcw, Layers } from 'lucide-react';
+import { RotateCcw, Layers, Download } from 'lucide-react';
+import { buildJsonExport, buildPumlExport, slugify } from '../lib/export';
+import type { MetamodelAST } from '../types';
 
 interface HeaderProps {
   activeView: ViewMode;
@@ -13,6 +15,10 @@ interface HeaderProps {
   metamodelVersion: string;
   /** Tab list, supplied by App.tsx so it can hide experimental tabs when flags are off. */
   tabs: { id: ViewMode; label: string; Icon: React.ComponentType<any> }[];
+  /** Scoped AST for exports (after layer + membership filters). */
+  scopedAst: MetamodelAST | null;
+  /** Membership filter applied (for export provenance). */
+  activeMembership: string | null;
 }
 
 
@@ -25,7 +31,42 @@ export const Header: React.FC<HeaderProps> = ({
   relCount,
   metamodelVersion,
   tabs,
+  scopedAst,
+  activeMembership,
 }) => {
+  const download = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportJson = () => {
+    if (!scopedAst) return;
+    const data = buildJsonExport(scopedAst, {
+      metamodelVersion,
+      url: window.location.href,
+      membership: activeMembership,
+    });
+    download(
+      JSON.stringify(data, null, 2),
+      `dea-scope-${slugify(activeMembership ?? 'all')}.json`,
+      'application/json',
+    );
+  };
+
+  const exportPuml = () => {
+    if (!scopedAst) return;
+    const puml = buildPumlExport(scopedAst, { metamodelVersion, membership: activeMembership });
+    download(
+      puml,
+      `dea-scope-${slugify(activeMembership ?? 'all')}.puml`,
+      'text/plain',
+    );
+  };
   return (
     <nav className="navbar">
       <div className="nav-inner">
@@ -61,6 +102,14 @@ export const Header: React.FC<HeaderProps> = ({
 
         {searchPalette}
 
+        <button className="btn btn-ghost" onClick={exportPuml} title="Export current scope as PlantUML fragment">
+          <Download size={14} />
+          <span>PUML</span>
+        </button>
+        <button className="btn btn-ghost" onClick={exportJson} title="Export current scope as JSON">
+          <Download size={14} />
+          <span>JSON</span>
+        </button>
         <button className="btn btn-ghost" onClick={onReset} title="Reset selection">
           <RotateCcw size={14} />
           <span>Reset</span>
