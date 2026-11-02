@@ -3,6 +3,27 @@
 All notable changes to `dea-web-viewer` are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] — presentation-hints consumption + scoped exports
+
+### Added
+- **Visualization profile consumption (CR-8 §47-§48/§67)** —
+  `src/lib/viz-profile.ts` + a new sync workflow
+  (`sync-viz-profile-from-dea-metamodel.yml`) vendoring
+  `dea-metamodel/visualization/profile/visualization.yaml` into
+  `public/data/visualization/`. Group colors/labels shown in the
+  MembershipFilterBar now come from the spec (core → #1f6feb,
+  business → #8250df, …) instead of viewer-side hardcoding. Loader asserts
+  drift against the inlined canonical; fallback = canonical (same pattern
+  as the maturity loader).
+- **Scoped exports (issue #4 follow-on)** — `src/lib/export.ts` + Header
+  buttons: **JSON** (the filtered subset with provenance: metamodel version,
+  membership filter, source URL, schema `dea-web-viewer/export/v1`) and
+  **PUML** (the same subset re-emitted as a PlantUML fragment with
+  attributes and solid/dashed arrows) — ready to paste into docs or
+  re-render.
+- `tests/vizProfileExport.test.ts` — 9 tests (profile parsing against the
+  real upstream YAML shape, drift fallback, JSON/PUML export shape).
+
 ## [0.4.0] — coverage dashboard + viewpoint generator
 
 ### Added

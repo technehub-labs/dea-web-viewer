@@ -189,6 +189,11 @@ src/
 └── main.tsx                      # React root
 ```
 
+Presentation hints (group colors/labels, edge styles, icons) are **consumed from the spec**
+(`dea-metamodel/visualization/profile/visualization.yaml`, vendored to `public/data/visualization/`
+by `sync-viz-profile-from-dea-metamodel.yml`) — per CR-8 §67 the viewer never defines them.
+Drift against the inlined canonical falls back to the canonical.
+
 The runtime contract:
 
 1. On mount, `App.tsx` calls `loadSyncedArtefacts()` which fetches all three files in parallel

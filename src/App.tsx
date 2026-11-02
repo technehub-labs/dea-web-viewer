@@ -345,6 +345,8 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
         entityCount={scopedAst.entities.length}
         relCount={scopedAst.relationships.length}
         metamodelVersion={metamodelVersion}
+        scopedAst={scopedAst}
+        activeMembership={activeMembership}
         searchPalette={
           <SearchPalette
             entities={ast.entities}

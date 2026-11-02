@@ -3,7 +3,9 @@ import type { MetamodelEntity } from '../types';
 import {
   buildMembershipGroups,
   membershipMatches,
+  getMembership,
 } from '../lib/membership';
+import { groupForProfile } from '../lib/viz-profile';
 
 interface MembershipFilterBarProps {
   entities: MetamodelEntity[];
@@ -56,15 +58,22 @@ export const MembershipFilterBar: React.FC<MembershipFilterBarProps> = ({
       {groups.map((g) => {
         const active = activeMembership === g.key;
         const count = entities.filter((e) => membershipMatches(e, g.key)).length;
+        // CR-8 §67: presentation hints come from the spec's visualization
+        // profile (dea-metamodel/visualization/profile), not from here.
+        const sample = entities.find((e) => membershipMatches(e, g.key));
+        const profileId = sample ? getMembership(sample).profile : undefined;
+        const vizGroup = profileId ? groupForProfile(profileId) : undefined;
+        const color = g.key === 'core' ? '#1f6feb' : vizGroup?.color;
+        const label = vizGroup?.label ?? g.label;
         return (
           <button
             key={g.key}
             className={`chip ${active ? 'chip-active' : ''}`}
-            style={chipStyle(active)}
+            style={chipStyle(active, color)}
             title={g.key}
             onClick={() => setActiveMembership(active ? null : g.key)}
           >
-            {g.label} ({count})
+            {label} ({count})
           </button>
         );
       })}
@@ -72,11 +81,12 @@ export const MembershipFilterBar: React.FC<MembershipFilterBarProps> = ({
   );
 };
 
-function chipStyle(active: boolean): React.CSSProperties {
+function chipStyle(active: boolean, color?: string): React.CSSProperties {
+  const accent = color ?? '#2dd4bf';
   return {
-    border: `1px solid ${active ? '#2dd4bf' : '#30363d'}`,
-    background: active ? 'rgba(45,212,191,0.15)' : 'transparent',
-    color: active ? '#2dd4bf' : '#c9d1d9',
+    border: `1px solid ${active ? accent : '#30363d'}`,
+    background: active ? `${accent}22` : 'transparent',
+    color: active ? accent : '#c9d1d9',
     borderRadius: 999,
     padding: '2px 10px',
     fontSize: 11,
