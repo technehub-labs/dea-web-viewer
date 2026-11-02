@@ -16,6 +16,10 @@ export interface MetamodelEntity {
   status?: 'existing' | 'existing-extended' | 'planned' | 'scaffold';
   // CR-CATALOG-STRUCT-07b: live CATALOG.yaml summary (built-time data).
   catalog_summary?: CatalogSummary;
+  // CR-4: raw membership object from entity-graph.json (core | profile/<id>).
+  // Consumed via src/lib/membership.ts (getMembership). Kept raw so the
+  // viewer stays a pure consumer of the graph shape.
+  membershipRaw?: { kind?: string; profile?: string | null };
   attributes: MetamodelAttribute[];
   x?: number;
   y?: number;

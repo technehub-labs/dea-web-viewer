@@ -1,12 +1,12 @@
 import React from 'react';
 import type { ViewMode } from '../types';
-import { Network, FileCode, Grid3X3, Route, Search, RotateCcw, Layers, BookOpen } from 'lucide-react';
+import { RotateCcw, Layers } from 'lucide-react';
 
 interface HeaderProps {
   activeView: ViewMode;
   setActiveView: (view: ViewMode) => void;
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
+  /** Rendered by App.tsx: SearchPalette with fuzzy results dropdown. */
+  searchPalette: React.ReactNode;
   onReset: () => void;
   entityCount: number;
   relCount: number;
@@ -19,8 +19,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   activeView,
   setActiveView,
-  searchTerm,
-  setSearchTerm,
+  searchPalette,
   onReset,
   entityCount,
   relCount,
@@ -60,15 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
           ))}
         </div>
 
-        <div className="nav-search">
-          <Search />
-          <input
-            type="text"
-            placeholder="Search entity, attribute, or relationship…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+        {searchPalette}
 
         <button className="btn btn-ghost" onClick={onReset} title="Reset selection">
           <RotateCcw size={14} />

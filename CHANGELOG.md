@@ -3,6 +3,37 @@
 All notable changes to `dea-web-viewer` are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] — quick-wins enrichment (deep-linking, search, Core/Profile mode)
+
+### Added
+- **Shareable deep links** (`src/lib/url-state.ts`) — the URL query string now
+  encodes committed viewer state:
+  `?view=interactive&entity=SO&layers=layer1,layer3&membership=core&q=…`.
+  State hydrates on load and writes back via `history.replaceState` (no
+  back-button pollution; per-keystroke search input is not synced). Invalid
+  values (unknown views/layers) are silently dropped.
+- **Full-text entity search** (issue #5) (`src/lib/search.ts` +
+  `src/components/SearchPalette.tsx`) — fuzzy search across name / class
+  alias / attributes / description with a ranked dropdown: ↑↓ to navigate,
+  Enter to open the entity drawer, Esc to close. Global shortcuts: `/`
+  focuses search, ⌘K / Ctrl+K focuses + selects.
+- **Core/Profile membership mode** (CR-4 consumer) (`src/lib/membership.ts` +
+  `src/components/MembershipFilterBar.tsx`) — a membership chip bar on the
+  Interactive and Matrix views filters the canvas to the OpenDEA Core
+  anchors, a single profile viewpoint (business, data, technology, ai,
+  ecosystem, governance, digital), or the `unassigned` group — which
+  surfaces the entities still awaiting upstream CR-5/6/7 allocation.
+  Relationships whose endpoints fall outside the filter are dropped too.
+- `tests/quickWins.test.ts` — 15 tests for the three new libs (URL
+  parse/serialize round-trip, search ranking, membership grouping/filtering).
+
+### Changed
+- `Header.tsx` — search input is now a slot (`searchPalette`) so App.tsx can
+  mount the richer SearchPalette without Header knowing its internals.
+- `syncedMetamodel.ts` — the AST now carries `membershipRaw` (the CR-4
+  `membership` object from `entity-graph.json`) as a passthrough.
+- Reset button also clears the membership filter.
+
 ## [0.2.0] — 2026-08-21 — CR-MM-02 (Phase C consumer support, viewer half)
 
 Adds the viewer half of the Maturity v2 consumer support (paired with

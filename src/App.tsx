@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type {
   ViewMode,
   LayerId,
@@ -20,7 +20,12 @@ import { MetamodelMatrix } from './components/MetamodelMatrix';
 import { TraceabilityPathFinder } from './components/TraceabilityPathFinder';
 import { CatalogBrowser } from './components/CatalogBrowser';
 import { MaturityRadar } from './components/MaturityRadar';
+import { SearchPalette } from './components/SearchPalette';
+import { MembershipFilterBar } from './components/MembershipFilterBar';
 import { flag } from './lib/feature-flags';
+import { parseUrlState, serializeUrlState, isDefaultState } from './lib/url-state';
+import { membershipMatches } from './lib/membership';
+import type { UrlState } from './lib/url-state';
 import { Network, FileCode, Grid3X3, Route, BookOpen, Radar } from 'lucide-react';
 
 export default function App() {
@@ -54,7 +59,58 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [activeLayers, setActiveLayers] = useState<Set<LayerId> | null>(null);
+  const [activeMembership, setActiveMembership] = useState<string | null>(null);
   const [impactTrace, setImpactTrace] = useState<ImpactTrace | null>(null);
+
+  /* ---------------------------------------------------------------
+   * Deep-linking (shareable URLs): the URL query string is hydrated
+   * into app state on mount, and committed state mutations are
+   * written back via history.replaceState (no back-button pollution:
+   * per-keystroke search input is NOT synced, only committed state —
+   * view, selected entity, layer + membership filters).
+   *   ?view=interactive&entity=SO&layers=layer1,layer3&membership=core
+   * --------------------------------------------------------------- */
+  const initialUrlState = useMemo(() => parseUrlState(window.location.search), []);
+  useEffect(() => {
+    if (initialUrlState.view) setActiveView(initialUrlState.view);
+    if (initialUrlState.q) setSearchTerm(initialUrlState.q);
+    // entity/layers/membership are applied after the AST loads (see below).
+  }, [initialUrlState]);
+
+  const urlEntityRef = useRef(initialUrlState.entity);
+  const urlLayersRef = useRef(initialUrlState.layers);
+  const urlMembershipRef = useRef(initialUrlState.membership);
+
+  // Committed-state → URL. Runs on every relevant state change.
+  useEffect(() => {
+    const state: UrlState = { view: activeView };
+    if (selectedEntityId) state.entity = selectedEntityId;
+    if (activeLayers && ast) {
+      const allIds = ast.layers.map((l) => l.id);
+      const enabled = allIds.filter((id) => activeLayers.has(id));
+      if (enabled.length > 0 && enabled.length < allIds.length) {
+        state.layers = enabled;
+      }
+    }
+    if (activeMembership) state.membership = activeMembership;
+    const qs = serializeUrlState(state);
+    const nextUrl = qs
+      ? `${window.location.pathname}?${qs}`
+      : window.location.pathname;
+    window.history.replaceState(null, '', nextUrl);
+  }, [activeView, selectedEntityId, activeLayers, activeMembership, ast]);
+
+  // Close the drawer with Esc (delegated; canvas also listens).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedEntityId(null);
+        setImpactTrace(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   /* ---------------------------------------------------------------
    * Load the synced artefacts once at startup. The artefacts live in
@@ -70,7 +126,20 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
         if (cancelled) return;
         setAst(next);
         setMetamodelVersion(getMetaVersion());
-        setActiveLayers(new Set(next.layers.map((l) => l.id)));
+        // Deep-link hydration: layer set from the URL if present.
+        const allLayerIds = new Set(next.layers.map((l) => l.id));
+        if (urlLayersRef.current && urlLayersRef.current.length > 0) {
+          setActiveLayers(new Set(urlLayersRef.current));
+        } else {
+          setActiveLayers(allLayerIds);
+        }
+        // Deep-link hydration: selected entity + membership filter.
+        if (urlEntityRef.current) {
+          setSelectedEntityId(urlEntityRef.current);
+        }
+        if (urlMembershipRef.current) {
+          setActiveMembership(urlMembershipRef.current);
+        }
       } catch (e: any) {
         if (cancelled) return;
         setLoadError(
@@ -109,6 +178,7 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
     setSelectedEntityId(null);
     setSearchTerm('');
     setImpactTrace(null);
+    setActiveMembership(null);
     selectAllLayers();
   }, [selectAllLayers]);
 
@@ -185,6 +255,25 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
   );
 
   /* ---------------------------------------------------------------
+   * CR-4: scoped AST — entities/relationships after the membership
+   * filter. Interactive/Matrix/Traceability views receive this scoped
+   * graph; relationships whose endpoints fall outside the membership
+   * filter are dropped too.
+   * --------------------------------------------------------------- */
+  const scopedAst = useMemo(() => {
+    if (!ast) return null;
+    if (!activeMembership) return ast;
+    const entities = ast.entities.filter((e) =>
+      membershipMatches(e, activeMembership),
+    );
+    const visible = new Set(entities.map((e) => e.id));
+    const relationships = ast.relationships.filter(
+      (r) => visible.has(r.from) && visible.has(r.to),
+    );
+    return { ...ast, entities, relationships };
+  }, [ast, activeMembership]);
+
+  /* ---------------------------------------------------------------
    * Render
    * --------------------------------------------------------------- */
   if (loadError) {
@@ -201,7 +290,7 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
     );
   }
 
-  if (!ast || !activeLayers) {
+  if (!ast || !activeLayers || !scopedAst) {
     return (
       <div className="app-shell">
         <div className="loading-shell">
@@ -229,12 +318,32 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
           setActiveView(v)
         }}
         searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
         onReset={handleReset}
-        entityCount={ast.entities.length}
-        relCount={ast.relationships.length}
+        entityCount={scopedAst.entities.length}
+        relCount={scopedAst.relationships.length}
         metamodelVersion={metamodelVersion}
+        searchPalette={
+          <SearchPalette
+            entities={ast.entities}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            onSelectEntity={(id) => {
+              setSelectedEntityId(id);
+              // Open the drawer on a view that shows it; from catalogs
+              // (alias ids differ) jump to canonical-svg.
+              setActiveView(activeView === 'catalogs' ? 'canonical-svg' : 'interactive');
+            }}
+          />
+        }
       />
+
+      {(activeView === 'interactive' || activeView === 'matrix') && (
+        <MembershipFilterBar
+          entities={ast.entities}
+          activeMembership={activeMembership}
+          setActiveMembership={setActiveMembership}
+        />
+      )}
 
       {(activeView === 'interactive' || activeView === 'matrix') && (
         <LayerFilterBar
@@ -258,7 +367,7 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
 
         {activeView === 'interactive' && (
           <InteractiveCanvas
-            ast={ast}
+            ast={scopedAst}
             selectedEntityId={selectedEntityId}
             onSelectEntity={(id) => setSelectedEntityId(id)}
             activeLayers={activeLayers}
@@ -269,7 +378,7 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
 
         {activeView === 'matrix' && (
           <MetamodelMatrix
-            ast={ast}
+            ast={scopedAst}
             onSelectEntity={(id) => {
               setSelectedEntityId(id);
               setActiveView('interactive');
@@ -279,7 +388,7 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
 
         {activeView === 'traceability' && (
           <TraceabilityPathFinder
-            ast={ast}
+            ast={scopedAst}
             onSelectEntity={(id) => {
               setSelectedEntityId(id);
               setActiveView('interactive');
