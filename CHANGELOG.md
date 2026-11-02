@@ -3,6 +3,33 @@
 All notable changes to `dea-web-viewer` are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] — coverage dashboard + viewpoint generator
+
+### Added
+- **Coverage & programme health view** (`src/lib/coverage.ts` +
+  `src/components/CoverageDashboard.tsx`) — aggregates the synced graph:
+  catalog coverage (cataloged vs backlog), status distribution bar,
+  per-layer coverage, live catalog content (CR-CATALOG-STRUCT-07b), and
+  the allocation gaps the programme cares about: unlayered entities and
+  ECF 7×7 coordinate presence (currently near-zero — surfaced, not hidden).
+  Turns the viewer into a programme-management instrument.
+- **Viewpoints view** (issue #3) (`src/lib/viewpoints.ts` +
+  `src/components/ViewpointGenerator.tsx`) — persona presets (CTO, Solution
+  Architect, Business Analyst, Data Architect, Governance Lead, Ecosystem
+  Manager, OpenDEA Core) that apply a curated layer + membership scope and
+  produce a shareable deep link. Mirrors the metamodel's own
+  `dea:entity-viewpoint` semantics: a tailored subset for a stakeholder
+  concern, never a new model. Also accepts `?viewpoint=cto` URL sugar that
+  expands into the canonical `?view=&layers=&membership=` params.
+- `tests/coverageViewpoints.test.ts` — 10 tests for the new libs.
+
+### Fixed
+- `types.ts` status union was missing `proposed` — 31 entities in the live
+  graph carry it. Added to the union (`MetamodelEntity.status`, graph entity
+  type) and to `CatalogBrowser`'s status order + filter dropdown.
+- `syncedMetamodel.ts` passes `ecf_coordinates` through the AST as
+  `ecfCoordinatesRaw` (consumed by coverage.ts).
+
 ## [0.3.0] — quick-wins enrichment (deep-linking, search, Core/Profile mode)
 
 ### Added

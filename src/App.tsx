@@ -22,11 +22,14 @@ import { CatalogBrowser } from './components/CatalogBrowser';
 import { MaturityRadar } from './components/MaturityRadar';
 import { SearchPalette } from './components/SearchPalette';
 import { MembershipFilterBar } from './components/MembershipFilterBar';
+import { CoverageDashboard } from './components/CoverageDashboard';
+import { ViewpointGenerator } from './components/ViewpointGenerator';
+import { getViewpoint, viewpointToUrlState } from './lib/viewpoints';
 import { flag } from './lib/feature-flags';
 import { parseUrlState, serializeUrlState, isDefaultState } from './lib/url-state';
 import { membershipMatches } from './lib/membership';
 import type { UrlState } from './lib/url-state';
-import { Network, FileCode, Grid3X3, Route, BookOpen, Radar } from 'lucide-react';
+import { Network, FileCode, Grid3X3, Route, BookOpen, Radar, BarChart3, Users } from 'lucide-react';
 
 export default function App() {
   // CR-MM-02-VIEWER: MaturityRadar is gated behind the `dea.experimental.maturityV2`
@@ -42,6 +45,8 @@ export default function App() {
         { id: 'traceability'    as const, label: 'Traceability',    Icon: Route },
         { id: 'catalogs'        as const, label: 'Catalogs',        Icon: BookOpen },
         { id: 'maturity-radar'  as const, label: 'Maturity radar',  Icon: Radar },
+        { id: 'coverage'        as const, label: 'Coverage',         Icon: BarChart3 },
+        { id: 'viewpoints'      as const, label: 'Viewpoints',      Icon: Users },
       ]
     : [
         { id: 'canonical-svg'   as const, label: 'Canonical SVG',   Icon: FileCode },
@@ -49,6 +54,8 @@ export default function App() {
         { id: 'matrix'          as const, label: 'Matrix',          Icon: Grid3X3 },
         { id: 'traceability'    as const, label: 'Traceability',    Icon: Route },
         { id: 'catalogs'        as const, label: 'Catalogs',        Icon: BookOpen },
+        { id: 'coverage'        as const, label: 'Coverage',         Icon: BarChart3 },
+        { id: 'viewpoints'      as const, label: 'Viewpoints',      Icon: Users },
       ]
   const availableViews = tabs.map(t => t.id)
 const [ast, setAst] = useState<MetamodelAST | null>(null);
@@ -70,12 +77,24 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
    * view, selected entity, layer + membership filters).
    *   ?view=interactive&entity=SO&layers=layer1,layer3&membership=core
    * --------------------------------------------------------------- */
-  const initialUrlState = useMemo(() => parseUrlState(window.location.search), []);
-  useEffect(() => {
-    if (initialUrlState.view) setActiveView(initialUrlState.view);
-    if (initialUrlState.q) setSearchTerm(initialUrlState.q);
-    // entity/layers/membership are applied after the AST loads (see below).
-  }, [initialUrlState]);
+  const initialUrlState = useMemo(() => {
+    // ?viewpoint=<id> is sugar for a persona preset: it expands into the
+    // standard view/layers/membership params (url-state stays canonical).
+    const params = new URLSearchParams(window.location.search);
+    const vpId = params.get('viewpoint');
+    if (vpId) {
+      const vp = getViewpoint(vpId);
+      if (vp) {
+        params.delete('viewpoint');
+        const vpState = viewpointToUrlState(vp);
+        if (vpState.view) params.set('view', vpState.view);
+        if (vpState.membership) params.set('membership', vpState.membership);
+        if (vpState.layers) params.set('layers', vpState.layers.join(','));
+        if (vpState.entity) params.set('entity', vpState.entity);
+      }
+    }
+    return parseUrlState(params.toString());
+  }, []);
 
   const urlEntityRef = useRef(initialUrlState.entity);
   const urlLayersRef = useRef(initialUrlState.layers);
@@ -85,6 +104,10 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
   useEffect(() => {
     const state: UrlState = { view: activeView };
     if (selectedEntityId) state.entity = selectedEntityId;
+    // committed search term is synced too (but not per-keystroke — the
+    // SearchPalette updates it only on commit in practice; syncing here
+    // keeps ?q= valid for shared searches).
+    if (searchTerm.trim()) state.q = searchTerm.trim();
     if (activeLayers && ast) {
       const allIds = ast.layers.map((l) => l.id);
       const enabled = allIds.filter((id) => activeLayers.has(id));
@@ -98,7 +121,7 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
       ? `${window.location.pathname}?${qs}`
       : window.location.pathname;
     window.history.replaceState(null, '', nextUrl);
-  }, [activeView, selectedEntityId, activeLayers, activeMembership, ast]);
+  }, [activeView, selectedEntityId, activeLayers, activeMembership, searchTerm, ast]);
 
   // Close the drawer with Esc (delegated; canvas also listens).
   useEffect(() => {
@@ -402,6 +425,35 @@ const [ast, setAst] = useState<MetamodelAST | null>(null);
             onSelectEntity={(alias) => {
               setSelectedEntityId(alias);
               setActiveView('canonical-svg');
+            }}
+          />
+        )}
+
+        {activeView === 'coverage' && (
+          <CoverageDashboard
+            ast={ast}
+            onSelectEntity={(id) => {
+              setSelectedEntityId(id);
+              setActiveView('interactive');
+            }}
+          />
+        )}
+
+        {activeView === 'viewpoints' && (
+          <ViewpointGenerator
+            ast={ast}
+            onApplyViewpoint={(qs) => {
+              // Expand the preset into the canonical URL params and let
+              // the hydration path apply it.
+              const parsed = parseUrlState(qs);
+              if (parsed.layers) {
+                setActiveLayers(new Set(parsed.layers));
+              }
+              if (parsed.membership !== undefined) {
+                setActiveMembership(parsed.membership ?? null);
+              }
+              if (parsed.entity) setSelectedEntityId(parsed.entity);
+              setActiveView((parsed.view ?? 'interactive') as ViewMode);
             }}
           />
         )}

@@ -11,7 +11,8 @@ const statusOrder: Record<string, number> = {
   existing: 0,
   'existing-extended': 1,
   scaffold: 2,
-  planned: 3,
+  proposed: 3,
+  planned: 4,
 };
 
 export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({ graph, onSelectEntity }) => {
@@ -88,6 +89,7 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({ graph, onSelectE
           <option value="existing">Existing</option>
           <option value="existing-extended">Existing (extended)</option>
           <option value="scaffold">Scaffold</option>
+          <option value="proposed">Proposed</option>
           <option value="planned">Planned</option>
         </select>
 
