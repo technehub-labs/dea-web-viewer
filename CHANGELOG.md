@@ -3,6 +3,23 @@
 All notable changes to `dea-web-viewer` are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.0] — spec-driven edge styling on the canvas
+
+### Added
+- `src/lib/edge-styles.ts` — spec-driven edge visual vocabulary aligned
+  with the visualization profile (CR-8 §67) and the CR-6 §22 rule
+  ("a planned edge must never render as a current edge" → non-active
+  semantics always dashed). rel_type → stroke colour + dash pattern:
+  structural (composition/aggregation) solid slate, behavioral
+  (realization/flow/serving/execution) solid sky, governance
+  (governance/contract) dashed violet, coupling (dependency/association)
+  dashed/dotted slate.
+- `InteractiveCanvas` — edge strokes now derive from `rel.relType`
+  (passthrough added to `MetamodelRelationship` + the graph loader);
+  a compact in-canvas EDGE TYPES legend shows the vocabulary.
+- `tests/edgeStyles.test.ts` — 5 tests, including a guard that every
+  rel_type present in the live graph has an explicit style.
+
 ## [0.5.0] — presentation-hints consumption + scoped exports
 
 ### Added

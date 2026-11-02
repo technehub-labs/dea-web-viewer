@@ -65,6 +65,9 @@ export interface MetamodelRelationship {
   label: string;
   type?: 'solid' | 'dashed';
   cardinality?: string;
+  /** Graph rel_type (realization | governance | …) — drives spec-driven
+   *  edge styling via src/lib/edge-styles.ts. */
+  relType?: string;
 }
 
 export interface MetamodelAST {

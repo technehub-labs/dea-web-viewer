@@ -345,6 +345,7 @@ export function parseSyncedPuml(pumlText: string): {
         to: r.to,
         label: r.cardinality ? `${r.label} [${r.cardinality}]` : r.label,
         type: r.style,
+        relType: r.rel_type,
       });
     }
   }
