@@ -52,9 +52,16 @@ export interface EntityGraphEntity {
   color?: string;           // #2DD4BF
   catalog_repo: string | null;
   repo_url: string | null;  // https://github.com/...
-  status?: 'existing' | 'existing-extended' | 'planned' | 'scaffold';
+  status?: 'existing' | 'existing-extended' | 'proposed' | 'planned' | 'scaffold';
   description?: string;
   specializes?: string;     // parent class_alias (ADR-0002 D3)
+  // ECF 7×7 coordinates (domain × stage) — bridge to the metaframework.
+  // Most entities do not carry coordinates yet; the Coverage dashboard
+  // surfaces that gap rather than hiding it.
+  ecf_coordinates?: {
+    domain?: string | null;
+    stage?: string | null;
+  } | null;
   // CR-4: core/profile membership of this entity.
   membership?: {
     kind: string;           // 'core' | 'profile'
@@ -244,6 +251,8 @@ export function parseSyncedPuml(pumlText: string): {
       description: e.description,
       // CR-4: raw membership passthrough (consumed by src/lib/membership.ts).
       membershipRaw: e.membership,
+      // ECF coordinates passthrough (consumed by src/lib/coverage.ts).
+      ecfCoordinatesRaw: e.ecf_coordinates ?? undefined,
       // CR-CATALOG-STRUCT-07b: pass through the build-time summary.
       // The viewer renders this in the entity's Catalog content card.
       catalog_summary: e.catalog_summary

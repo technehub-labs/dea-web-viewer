@@ -36,6 +36,8 @@ A React 19 + Vite + TypeScript single-page app with five modes:
 | **Search palette** | Fuzzy full-text search across name / alias / attributes / description (issue #5). `/` or ⌘K to focus, ↑↓ + Enter to open |
 | **Deep links** | Shareable URLs: `?view=interactive&entity=SO&layers=layer1,layer3&membership=core&q=…` |
 | **Core/Profile mode** | CR-4 consumer: membership chips filter the canvas to the OpenDEA Core anchors, one profile viewpoint, or the unassigned (pending CR-5/6/7) group |
+| **Coverage** | Programme-health dashboard: catalog coverage + backlog, status distribution, per-layer counts, live catalog content, and allocation gaps (unlayered, missing ECF coordinates) |
+| **Viewpoints** | Persona presets (CTO, SA, BA, Data, Governance, Ecosystem, Core) applying curated layer+membership scopes with shareable links (`?viewpoint=cto`) |
 | **Maturity radar** (experimental, default off) | Dual-band v1+v2 maturity score radar — renders the canonical v2 maturity scoring bands (CR-014) overlayed on the legacy v1 linear bands, with the CR-014 worked-example score (80) → effort-adjusted value 49.2 visible. Consumer for `dea-cli maturity score` (CR-MM-02). Gated behind `dea.experimental.maturityV2` feature flag — see [`src/lib/feature-flags.ts`](src/lib/feature-flags.ts). |
 
 ## View modes (maturity radar — feature flag)

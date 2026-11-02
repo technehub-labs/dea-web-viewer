@@ -24,6 +24,8 @@ export const VALID_VIEWS: ViewMode[] = [
   'traceability',
   'catalogs',
   'maturity-radar',
+  'coverage',
+  'viewpoints',
 ];
 
 export const VALID_LAYERS: LayerId[] = [

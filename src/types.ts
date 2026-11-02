@@ -13,13 +13,18 @@ export interface MetamodelEntity {
   layer_name?: string;
   catalog_repo?: string;
   repo_url?: string;
-  status?: 'existing' | 'existing-extended' | 'planned' | 'scaffold';
+  // NB: the live graph also carries 'proposed' (31 entities as of
+  // metamodel 1.0.0) — kept in the union so the data round-trips.
+  status?: 'existing' | 'existing-extended' | 'proposed' | 'planned' | 'scaffold';
   // CR-CATALOG-STRUCT-07b: live CATALOG.yaml summary (built-time data).
   catalog_summary?: CatalogSummary;
   // CR-4: raw membership object from entity-graph.json (core | profile/<id>).
   // Consumed via src/lib/membership.ts (getMembership). Kept raw so the
   // viewer stays a pure consumer of the graph shape.
   membershipRaw?: { kind?: string; profile?: string | null };
+  // ECF 7×7 coordinates (domain × stage) from the metaframework — raw
+  // passthrough consumed by src/lib/coverage.ts.
+  ecfCoordinatesRaw?: { domain?: string | null; stage?: string | null } | null;
   attributes: MetamodelAttribute[];
   x?: number;
   y?: number;
@@ -78,6 +83,8 @@ export type ViewMode =
   | 'traceability'
   | 'catalogs'
   | 'maturity-radar'   // CR-MM-02-VIEWER — gated behind dea.experimental.maturityV2 feature flag;
+  | 'coverage'          // programme-health dashboard over the synced graph;
+  | 'viewpoints';       // persona presets (issue #3) — curated layer+membership scopes;
 
 export interface ImpactTrace {
   sourceId: string;
