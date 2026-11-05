@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { MetamodelAST, MetamodelEntity, MetamodelLayer, MetamodelRelationship, LayerId, ImpactTrace } from '../types';
 import { ZoomIn, ZoomOut, Maximize2, Move, HelpCircle, Layers, Sparkles, AlertCircle, Route, Expand, Shrink, RotateCcw, BookOpen, ChevronDown, ChevronUp, Info, X } from 'lucide-react';
+import { edgeStyleFor } from '../lib/edge-styles';
 
 interface InteractiveCanvasProps {
   ast: MetamodelAST;
@@ -631,6 +632,10 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({
       labelPos = { x: (startX + endX) / 2, y: (startY + endY) / 2 };
     }
 
+    // Spec-driven base color/edge treatment from the relationship's
+    // rel_type (src/lib/edge-styles.ts — vocabulary aligned with the
+    // visualization profile, CR-8 §67). Interaction states override.
+    const spec = edgeStyleFor(rel.relType);
     const strokeColor = isHoverActive
       ? isHoverDirectEdge
         ? '#38BDF8' // bright sky blue for direct neighbor edges
@@ -638,8 +643,8 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({
       : isImpact
       ? '#EC4899' // pink for impact
       : isSelected
-      ? '#3B82F6' // blue for selected
-      : '#64748B'; // slate
+      ? spec.stroke // keep the spec hue for the selected edge
+      : spec.stroke;
 
     const opacity = isHoverActive
       ? isHoverDirectEdge
@@ -671,7 +676,7 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({
           fill="none"
           stroke={strokeColor}
           strokeWidth={isHoverDirectEdge ? 2.5 : isSelected || isImpact ? 2.5 : 1.5}
-          strokeDasharray={rel.type === 'dashed' ? '5,5' : undefined}
+          strokeDasharray={spec.dasharray ?? (rel.type === 'dashed' ? '5,5' : undefined)}
           strokeOpacity={opacity}
           markerEnd={
             isHoverDirectEdge
@@ -1054,6 +1059,29 @@ export const InteractiveCanvas: React.FC<InteractiveCanvasProps> = ({
 
           {/* RELATIONSHIP EDGES */}
           {activeRelationships.map(renderRelationshipEdge)}
+
+          {/* EDGE STYLE LEGEND — spec-driven vocabulary (edge-styles.ts) */}
+          <g transform="translate(16, 12)" style={{ pointerEvents: 'none' }}>
+            <rect x={0} y={0} width={186} height={92} rx={8}
+              fill="#0d1117" fillOpacity={0.85} stroke="#30363d" strokeWidth={1} />
+            <text x={10} y={16} fontSize={9} fill="#8b949e"
+              style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              EDGE TYPES
+            </text>
+            {[
+              { label: 'realization / flow', style: edgeStyleFor('realization') },
+              { label: 'governance', style: edgeStyleFor('governance') },
+              { label: 'dependency', style: edgeStyleFor('dependency') },
+              { label: 'composition', style: edgeStyleFor('composition') },
+            ].map((row, i) => (
+              <g key={row.label} transform={`translate(10, ${28 + i * 16})`}>
+                <line x1={0} y1={0} x2={26} y2={0}
+                  stroke={row.style.stroke} strokeWidth={1.5}
+                  strokeDasharray={row.style.dasharray} />
+                <text x={34} y={3} fontSize={9} fill="#c9d1d9">{row.label}</text>
+              </g>
+            ))}
+          </g>
         </svg>
 
         {/* HTML OVERLAY FOR ENTITY NODES */}
